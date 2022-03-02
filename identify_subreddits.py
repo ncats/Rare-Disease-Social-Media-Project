@@ -130,7 +130,7 @@ class MapSubreddit:
         dump_json(self.path, matches,'normalized_subreddit_matches.json')
 
 class MapResults:
-    def __init__(self, false_positives, path='../data'):
+    def __init__(self, false_positives, path='..\data'):
         self.path = path
         self.false_positives = false_positives
         self.matches = self._get_matches()
