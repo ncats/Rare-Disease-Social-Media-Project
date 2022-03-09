@@ -15,7 +15,6 @@ TO DO:
 - [ ] Finish Topic Modeling scripts
 
 
-# Adapting and Understanding Prior Work
 ## Project Part 1 : Data Gathering and Classification
 Scripts for gathering and processing data.
 * `query_gard.py` : Retrieves GARD data. *Currently not working due to server being down.
