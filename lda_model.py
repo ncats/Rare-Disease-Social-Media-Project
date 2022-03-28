@@ -94,13 +94,14 @@ class OptunaOpj:
         Returns the coherence score used to optimize the LDA topic model generation using the
         Optuna package.
     """
-    def __init__(self, documents, id2word, corpus, name, path):
+    def __init__(self, documents, id2word, corpus, name, path, coherence):
         # documents to be passed on to LDAGen.
         self.documents = documents
         self.id2word = id2word
         self.corpus = corpus
         self.name = name
         self.path = path
+        self.coherence = coherence
 
     def __call__(self, trial):
         # Objective function for optuna package.
@@ -108,30 +109,28 @@ class OptunaOpj:
         passes = trial.suggest_int('passes', 1, 25)
         alpha = trial.suggest_categorical('alpha', ['asymmetric', 'symmetric', .1])
         eta = trial.suggest_categorical('eta', ['symmetric', .01, .001])
-        random_state = trial.suggest_int('random_state', 0, 100)
         initial = time.time()
 
         model = LDAGen(num_topics=num_topics,
                                      passes=passes,
                                      alpha=alpha,
-                                     eta=eta,
-                                     random_state=random_state
+                                     eta=eta
                                     ).fit(id2word= self.id2word,
                                           corpus = self.corpus)
 
         coherence_model = create_coherence_model(model=model,
                                                  texts=self.documents,
-                                                 id2word=self.id2word)
+                                                 id2word=self.id2word,
+                                                 coherence=self.coherence)
         coherence = coherence_model.get_coherence()
 
-        temp_file = Path(f'{self.name}_temp.json')
+        temp_file = Path(self.path, f'{self.name}.json')
         results = {'coherence': coherence,
                    'eval_time': round(time.time() - initial, 1),
                    'num_topics': num_topics,
                    'passes': passes,
                    'alpha': alpha,
-                   'eta': eta,
-                   'random_state': random_state}
+                   'eta': eta}
 
         if temp_file.is_file():
             temp_results = load_json(temp_file)
@@ -140,9 +139,9 @@ class OptunaOpj:
         else:
             temp_results = [results]
 
-        fname = datapath(f'{self.path}/{self.name}_optuna_{trial.number}')
+        fname = datapath(f'{self.path}/{self.name}_{trial.number}')
         model.save(fname)
-        dump_json(temp_results, temp_file.parent.resolve(), f'{self.name}_temp')
+        dump_json(temp_results, self.path, f'{self.name}')
 
         return coherence
 
@@ -171,7 +170,7 @@ class HyperoptObj:
         values and loss (1-coherence).
     """
 
-    def __init__(self, tokenized_documents, id2word, corpus, name, path, count):
+    def __init__(self, tokenized_documents, id2word, corpus, name, path, count, coherence):
         # documents to be passed on to LDAGen.
         self.documents = tokenized_documents
         self.id2word = id2word
@@ -179,6 +178,7 @@ class HyperoptObj:
         self.name = name
         self.path = path
         self.count = count
+        self.coherence = coherence
 
     def __call__(self, args):
          # Objective function for hyperopt package.
@@ -188,11 +188,12 @@ class HyperoptObj:
                                    corpus = self.corpus)
         coherence_model = create_coherence_model(model=model,
                                                  texts=self.documents,
-                                                 id2word=self.id2word)
+                                                 id2word=self.id2word,
+                                                 coherence=self.coherence)
         coherence = coherence_model.get_coherence()
         loss = 1 - coherence
 
-        temp_file = Path(f'{self.name}_temp.json')
+        temp_file = Path(self.path, f'{self.name}.json')
         results = {'loss': loss,
                    'status': STATUS_OK,
                    'eval_time': round(time.time() - initial, 1),
@@ -200,7 +201,6 @@ class HyperoptObj:
                    'passes': int(args['passes']),
                    'alpha': args['alpha'],
                    'eta': args['eta'],
-                   'random_state': int(args['random_state']),
                    'count': self.count}
 
         if temp_file.is_file():
@@ -209,10 +209,10 @@ class HyperoptObj:
         else:
             temp_results = [results]
 
-        fname = datapath(f'{self.path}/{self.name}_hyperopt_{self.count}')
+        fname = datapath(f'{self.path}/{self.name}_{self.count}')
         self.count += 1
         model.save(fname)
-        dump_json(temp_results, temp_file.parent.resolve(), f'{self.name}_temp')
+        dump_json(temp_results, self.path, f'{self.name}')
 
         return results
 

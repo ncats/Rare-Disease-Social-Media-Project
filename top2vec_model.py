@@ -145,7 +145,10 @@ class Top2VecModel:
         else:
             self.hdbscan_args = hdbscan_args
 
-        self.top2vec_args = top2vec_args
+        if not top2vec_args:
+            self.top2vec_args = {}
+        else:
+            self.top2vec_args = top2vec_args
 
     def fit(self):
         """

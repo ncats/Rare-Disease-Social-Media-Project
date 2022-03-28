@@ -6,6 +6,7 @@ Preprocessing functions for topic generation files needed for topic modeling alg
 
 from pathlib import Path
 from typing import Any, Union, Optional
+from tqdm import tqdm
 import re
 from gensim.corpora.dictionary import Dictionary
 from nltk.tokenize import word_tokenize
@@ -162,7 +163,7 @@ def tokenize_docs(documents:list[str]) -> list[list[str]]:
         string tokens (words) associated with that document.
     """
     # Applies tokenization to each document in documents.
-    return [tokenize_text(doc) for doc in documents]
+    return [tokenize_text(doc) for doc in tqdm(documents, desc='Tokenizing Text')]
 
 def tokenize_text(text:str) -> list[str]:
     """
