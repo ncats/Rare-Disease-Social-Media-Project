@@ -35,7 +35,7 @@ class MapSubreddit:
         self.path = path
         self.nlp = nlp
         self.matcher = PhraseMatcher(self.nlp.vocab, attr=attr)
-        self.data = load_json(join(self.path,'preprocessed_subreddit_list.json'))
+        self.data = load_json('C:\\Users\\shanm\\Documents\\Axle Informatics\\Rare-Disease-Social-Media-Project\\mapper\\data\\preprocessed_subreddit_list.json')
         self._get_gard_data()
         self._convert_data()
         self._use_phrasematcher()
@@ -44,7 +44,7 @@ class MapSubreddit:
         """
         Loads the JSON GARD data.
         """
-        path = join(self.path,'neo4j_rare_disease_list.json')
+        path = 'C:\\Users\\shanm\\Documents\\Axle Informatics\\Rare-Disease-Social-Media-Project\\mapper\\data\\neo4j_rare_disease_list.json'
         gard_data = load_json(path)
         self._create_gard_data(gard_data)
 
@@ -112,6 +112,7 @@ class MapSubreddit:
         print('Processing text ...')
         t0 = time.time()
         # Use of pipe greatly speeds up processing of the data.
+
         for doc, context in self.nlp.pipe(self.data, as_tuples=True):
             # Set metadata attributes from the context.
             doc._.name = context['name']

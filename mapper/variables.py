@@ -1,3 +1,8 @@
+# potentially make these into json files and create an object that can
+#  add and remove values
+
+false_positives_acronyms = ['ChILD','Tina','Azul']
+
 false_positives = ['baltimore', 'stocks', 'ACDC', 'polydactyl', 'Asian_Fever','JRPG', 'Lemon',
                        'lebanon', 'Iditarod', 'bigfoot', 'Pantera', 'CharterCities', 'thrashmetal',
                        'Asthma', 'beadsprites', 'Chameleons', 'metaphorically', 'MovieExchange',
