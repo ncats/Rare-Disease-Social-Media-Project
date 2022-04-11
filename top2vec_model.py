@@ -21,19 +21,40 @@ class Top2VecModel:
     name: str
         Name of the collection of documents for use in title and saving file
         (e.g. 'CysticFibrosis')
+
     model_name: str
         Name of the model for use in saving the model to a file in the directory
         associated with name and path. (e.g. 'CysticFibrosis_doc2vec')
+
     path: str, Path (Optional, default None)
         Path to store the model files to.
+
     documents: List of str
         Input corpus, should be a list of strings.
+
     min_count: int (Optional, default 50)
         Ignores all words with total frequency lower than this. For smaller
         corpora a smaller min_count will be necessary.
+
+    ngram_vocab: bool (Optional, default False)
+        Add phrases to topic descriptions.
+
+        Uses gensim phrases to find common phrases in the corpus and adds them
+        to the vocabulary.
+
+        For more information visit:
+        https://radimrehurek.com/gensim/models/phrases.html
+
+    ngram_vocab_args: dict (Optional, default None)
+        Pass custom arguments to gensim phrases.
+
+        For more information visit:
+        https://radimrehurek.com/gensim/models/phrases.html
+
     embedding_model: string or callable
         This will determine which model is used to generate the document and
         word embeddings. The valid string options are:
+
             * doc2vec
             * universal-sentence-encoder
             * universal-sentence-encoder-large
@@ -42,33 +63,41 @@ class Top2VecModel:
             * distiluse-base-multilingual-cased
             * all-MiniLM-L6-v2
             * paraphrase-multilingual-MiniLM-L12-v2
+
         For large data sets and data sets with very unique vocabulary doc2vec
         could produce better results. This will train a doc2vec model from
         scratch. This method is language agnostic. However multiple languages
         will not be aligned.
+
         Using the universal sentence encoder options will be much faster since
         those are pre-trained and efficient models. The universal sentence
         encoder options are suggested for smaller data sets. They are also
         good options for large data sets that are in English or in languages
         covered by the multilingual model. It is also suggested for data sets
         that are multilingual.
+
         For more information on universal-sentence-encoder options visit:
         https://tfhub.dev/google/collections/universal-sentence-encoder/1
+
         The SBERT pre-trained sentence transformer options are
         distiluse-base-multilingual-cased,
         paraphrase-multilingual-MiniLM-L12-v2, and all-MiniLM-L6-v2.
+
         The distiluse-base-multilingual-cased and
         paraphrase-multilingual-MiniLM-L12-v2 are suggested for multilingual
         datasets and languages that are not
         covered by the multilingual universal sentence encoder. The
         transformer is significantly slower than the universal sentence
         encoder options(except for the large options).
+
         For more information on SBERT options visit:
         https://www.sbert.net/docs/pretrained_models.html
+
         If passing a callable embedding_model note that it will not be saved
         when saving a top2vec model. After loading such a saved top2vec model
         the set_embedding_model method will need to be called and the same
         embedding_model callable used during training must be passed to it.
+
     speed: string (Optional, default 'learn')
         This parameter is only used when using doc2vec as embedding_model.
         It will determine how fast the model takes to train. The
@@ -81,19 +110,17 @@ class Top2VecModel:
             * fast-learn
             * learn
             * deep-learn
+
     workers: int (Optional)
         The amount of worker threads to be used in training the model. Larger
         amount will lead to faster training.
-    ngram_range: tuple (Optional, default=(1,1))
-        The lower and upper boundary of the range of n-values for different
-        word n-grams or char n-grams to be extracted. All values of n such such
-        that min_n <= n <= max_n will be used. For example an ngram_range of
-        (1, 1) means only unigrams, (1, 2) means unigrams and bigrams, and
-        (2, 2) means only bigrams. Only applies if analyzer is not callable.
+
     umap_args: dict (Optional, default None)
         Pass custom arguments to UMAP.
+
     hdbscan_args: dict (Optional, default None)
         Pass custom arguments to HDBSCAN.
+
     top2vec_args: dict (Optional, default None)
         Pass custom arguments to Top2Vec
     """
@@ -106,7 +133,8 @@ class Top2VecModel:
                  min_count:Optional[int] = 10,
                  speed: Optional[str] = 'learn',
                  workers:Optional[int]=None,
-                 ngram_range:Optional[tuple[int, int]]=(1,1),
+                 ngram_vocab:Optional[bool]=False,
+                 ngram_vocab_args:Optional[dict]=None,
                  umap_args:Optional[dict]=None,
                  hdbscan_args:Optional[dict]=None,
                  top2vec_args:Optional[dict]=None,
@@ -128,7 +156,8 @@ class Top2VecModel:
         else:
             self.workers = workers
 
-        self.ngram_range = ngram_range
+        self.ngram_vocab = ngram_vocab
+        self.ngram_vocab_args = ngram_vocab_args
 
         if not umap_args:
             self.umap_args = {'n_neighbors': 15,
@@ -168,7 +197,8 @@ class Top2VecModel:
                              min_count=self.min_count,
                              speed=self.speed,
                              workers=self.workers,
-                             ngram_range=self.ngram_range,
+                             ngram_vocab=self.ngram_vocab,
+                             ngram_vocab_args=self.ngram_vocab_args,
                              umap_args=self.umap_args,
                              hdbscan_args=self.hdbscan_args,
                              **self.top2vec_args)

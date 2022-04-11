@@ -70,8 +70,10 @@ class CTFIDF:
     clustered_docs: list[str]
         List where each list is a single string made up of all the documents in that class
         (topic).
+
     topic_list: list[Union[int, str]]
         List of labels for the topics or classes.
+
     n: int
         Top n words to be extracted from each class (topic).
     """

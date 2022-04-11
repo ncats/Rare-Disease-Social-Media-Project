@@ -7,18 +7,17 @@ documentation from that package is used to describe the different parameters tha
 gensim.
 """
 from pathlib import Path
-from typing import Optional
+from typing import Union, Optional
 import time
 import logging
 
-import gensim
-from gensim.corpora.dictionary import Dictionary
-from gensim.models.ldamulticore import LdaMulticore
-from gensim.models.coherencemodel import CoherenceModel
+from gensim.models.ldamodel import LdaModel
 from gensim.test.utils import datapath
+from gensim.corpora.dictionary import Dictionary
 import psutil
-from hyperopt import STATUS_OK
+from hyperopt import STATUS_OK, STATUS_FAIL
 from utils.utils import load_json, dump_json
+from topic_tools import find_distribution, create_coherence_model
 
 
 #logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.WARNING)
@@ -26,52 +25,7 @@ logger = logging.getLogger('gensim')
 logger.setLevel(logging.WARNING)
 
 
-def create_coherence_model(model:Optional[gensim.models.basemodel.BaseTopicModel] = None,
-                           topics:Optional[list[list[str]]] = None,
-                           texts:Optional[list[list[str]]] = None,
-                           id2word:Optional[Dictionary] = None,
-                           coherence:str = 'c_v',
-                           topn:int = 10,
-                           processes:int = 1):
-    """
-    Creates a gensim.models.coherencemodel.CoherenceModel object from either a model or list of
-    tokenized topics. Used to calculate coherence of a topic.
-
-    Parameters
-    ----------
-    model: gensim.models.basemodel.BaseTopicModel (Optional, default None)
-        Pre-trained topic model provided if topics not provided. Currently supports LdaModel,
-        LdaMulticore, LdaMallet, and LdaVowpalWabbit.
-    topics: list[list[str]] (Optional, default None)
-        List of tokenized topics. id2word must be provided.
-    texts: list[list[str]] (Optional, default None)
-        Tokenized texts for use with sliding window based probability estimator ('c_something').
-    id2word: gensim.corpora.dictionary.Dictionary (Optional, default None)
-        If model present, not needed. If both provided, passed id2word will be used.
-    coherence: str (default 'c_v')
-        Currently through gensim supports following coherence measures: 'u_mass', 'c_v', 'c_uci',
-        and 'c_npmi. Coherence measure 'c_uci = 'c_pmi'.
-    topn: int (default 10)
-        Integer corresponding to number of top words to be extracted from each topic.
-    processes: int (default 1)
-        Number of processes to use, any value less than 1 will be num_cpus - 1.
-
-    Returns
-    -------
-    coherence_model: gensim.models.coherencemodel.CoherenceModel
-        CoherenceModel object used for building and maintaining a model for topic coherence.
-    """
-    coherence_model = CoherenceModel(model = model,
-                                    topics = topics,
-                                    texts = texts,
-                                    dictionary= id2word,
-                                    coherence = coherence,
-                                    topn = topn,
-                                    processes = processes)
-    return coherence_model
-
-
-class OptunaOpj:
+class OptunaObj:
     """
     Optuna objective function for use in optimization of LDA hyperparameters.
 
@@ -79,14 +33,23 @@ class OptunaOpj:
     ----------
     tokenized_documents: list[list[str]]
         List of lists of strings where each string corresponds to a token or word.
+
     id2word: gensim.corpora.dictionary.Dictionary
         Mapping of word ids to words.
+
     corpus: list[tuple[int, int]]
         Document vectors made up of list of tuples with (word_id, word_frequency)
+
     name: str
         Name of model.
+
     path: str, Path
         Path to store the model files to.
+
+    coherence: str (default 'c_v')
+        Currently through gensim supports following coherence measures: 'u_mass', 'c_v', 'c_uci',
+        and 'c_npmi. Coherence measure 'c_uci = 'c_pmi'.
+
 
     Returns
     -------
@@ -94,7 +57,13 @@ class OptunaOpj:
         Returns the coherence score used to optimize the LDA topic model generation using the
         Optuna package.
     """
-    def __init__(self, documents, id2word, corpus, name, path, coherence):
+    def __init__(self,
+                 documents:list[str],
+                 id2word:Dictionary,
+                 corpus:list[tuple[int, int]],
+                 name:str,
+                 path:Union[str, Path],
+                 coherence:str='c_v'):
         # documents to be passed on to LDAGen.
         self.documents = documents
         self.id2word = id2word
@@ -107,8 +76,9 @@ class OptunaOpj:
         # Objective function for optuna package.
         num_topics = trial.suggest_int('num_topics', 3, 100)
         passes = trial.suggest_int('passes', 1, 25)
-        alpha = trial.suggest_categorical('alpha', ['asymmetric', 'symmetric', .1])
-        eta = trial.suggest_categorical('eta', ['symmetric', .01, .001])
+        alpha = trial.suggest_categorical('alpha', ['asymmetric', 'symmetric', .1, 'auto'])
+        eta = trial.suggest_categorical('eta', ['symmetric',.01, .001, 'auto'])
+        decay = trial.suggest_float('decay', 0.5, 0.9, step=0.1)
         initial = time.time()
 
         model = LDAGen(num_topics=num_topics,
@@ -118,19 +88,41 @@ class OptunaOpj:
                                     ).fit(id2word= self.id2word,
                                           corpus = self.corpus)
 
-        coherence_model = create_coherence_model(model=model,
-                                                 texts=self.documents,
-                                                 id2word=self.id2word,
-                                                 coherence=self.coherence)
-        coherence = coherence_model.get_coherence()
+        post_dist = find_distribution(model, self.documents, self.corpus)
+
+        post_status = True
+        for value in post_dist.values():
+            if value < 10:
+                post_status = False
+
+        coherence_value = {}
+        if not post_status:
+            coherence_value = {'c_v': 1.0,
+                               'c_npmi': 1.0,
+                               'u_mass': 1.0,
+                               'c_uci': 1.0}
+        else:
+            for coherence in ['c_v', 'c_npmi', 'u_mass', 'c_uci']:
+                coherence_model = create_coherence_model(model=model,
+                                                        texts=self.documents,
+                                                        id2word=self.id2word,
+                                                        coherence=coherence)
+                coherence_value[coherence] = coherence_model.get_coherence()
+
+
+
 
         temp_file = Path(self.path, f'{self.name}.json')
-        results = {'coherence': coherence,
+        results = {'c_v': coherence_value['c_v'],
+                   'c_npmi':coherence_value['c_npmi'],
+                   'u_mass':coherence_value['u_mass'],
+                   'c_uci':coherence_value['c_uci'],
                    'eval_time': round(time.time() - initial, 1),
                    'num_topics': num_topics,
                    'passes': passes,
                    'alpha': alpha,
-                   'eta': eta}
+                   'eta': eta,
+                   'decay':decay}
 
         if temp_file.is_file():
             temp_results = load_json(temp_file)
@@ -143,7 +135,7 @@ class OptunaOpj:
         model.save(fname)
         dump_json(temp_results, self.path, f'{self.name}')
 
-        return coherence
+        return coherence_value[self.coherence]
 
 class HyperoptObj:
     """
@@ -153,15 +145,25 @@ class HyperoptObj:
     ----------
     tokenized_documents: list[list[str]]
         List of lists of strings where each string corresponds to a token or word.
+
     id2word: gensim.corpora.dictionary.Dictionary
         Mapping of word ids to words.
+
     corpus: list[tuple[int, int]]
         Document vectors made up of list of tuples with (word_id, word_frequency)
+
     name: str
         Name of model.
+
     path: str, Path
         Path to store the model files to.
-    count: int (Optional, default 0)
+
+    count: int
+        Count of trial used to index and name models.
+
+    coherence: str (default 'c_v')
+        Currently through gensim supports following coherence measures: 'u_mass', 'c_v', 'c_uci',
+        and 'c_npmi. Coherence measure 'c_uci = 'c_pmi'.
 
     Returns
     -------
@@ -170,7 +172,14 @@ class HyperoptObj:
         values and loss (1-coherence).
     """
 
-    def __init__(self, tokenized_documents, id2word, corpus, name, path, count, coherence):
+    def __init__(self,
+                 tokenized_documents:list[list[str]],
+                 id2word:Dictionary,
+                 corpus:list[tuple[int, int]],
+                 name:str,
+                 path:Union[str, Path],
+                 count:int,
+                 coherence:str='c_v'):
         # documents to be passed on to LDAGen.
         self.documents = tokenized_documents
         self.id2word = id2word
@@ -186,21 +195,56 @@ class HyperoptObj:
 
         model = LDAGen(**args).fit(id2word= self.id2word,
                                    corpus = self.corpus)
-        coherence_model = create_coherence_model(model=model,
-                                                 texts=self.documents,
-                                                 id2word=self.id2word,
-                                                 coherence=self.coherence)
-        coherence = coherence_model.get_coherence()
-        loss = 1 - coherence
+        post_dist = find_distribution(model, self.documents, self.corpus)
+
+        post_status = True
+        for value in post_dist.values():
+            if value < 10:
+                post_status = False
+
+        if not post_status:
+            loss = 1.0
+            status = STATUS_FAIL
+        else:
+            coherence_model = create_coherence_model(model=model,
+                                                    texts=self.documents,
+                                                    id2word=self.id2word,
+                                                    coherence=self.coherence)
+            coherence = coherence_model.get_coherence()
+            loss = 1 - coherence
+            status = STATUS_OK
+
+        coherence_value = {}
+        if not post_status:
+            loss = 1.0
+            status = STATUS_FAIL
+            coherence_value = {'c_v': 1.0,
+                               'c_npmi': 1.0,
+                               'u_mass': 1.0,
+                               'c_uci': 1.0}
+        else:
+            for coherence in ['c_v', 'c_npmi', 'u_mass', 'c_uci']:
+                coherence_model = create_coherence_model(model=model,
+                                                        texts=self.documents,
+                                                        id2word=self.id2word,
+                                                        coherence=coherence)
+                coherence_value[coherence] = coherence_model.get_coherence()
+            loss = 1 - coherence_value[self.coherence]
+            status = STATUS_OK
 
         temp_file = Path(self.path, f'{self.name}.json')
         results = {'loss': loss,
-                   'status': STATUS_OK,
+                   'c_v': coherence_value['c_v'],
+                   'c_npmi':coherence_value['c_npmi'],
+                   'u_mass':coherence_value['u_mass'],
+                   'c_uci':coherence_value['c_uci'],
+                   'status': status,
                    'eval_time': round(time.time() - initial, 1),
                    'num_topics': int(args['num_topics']),
                    'passes': int(args['passes']),
                    'alpha': args['alpha'],
                    'eta': args['eta'],
+                   'decay': args['decay'],
                    'count': self.count}
 
         if temp_file.is_file():
@@ -225,13 +269,17 @@ class LDAGen:
     ----------
     num_topics: int (default 10)
         Number of topics to be extracted from corpus.
-    workers: int (Optional, default None)
+
+    workers: int (Optional, default 1)
         Number of worker processes used for parallelization. If None, workers will be set to number
         of real cores - 1 for optimal performance.
+
     chunksize: int (Optional, default 4096)
         Number of documents to be used in each training chunk.
+
     passes: int (Optional, default 10)
         Number of passes through the corpus during training.
+
     alpha: float, np.ndarray of float, list[float], str (Optional, default 'asymmetric')
         A-priori belief on document-topic distribution. This can be:
         'symmetric': Uses fixed symmetric prior of 1.0 / num_topics.
@@ -239,6 +287,7 @@ class LDAGen:
         scalar: symmetric prior over document-topic distribution.
         1-D array: Array of length = num_topics to denote an asymmetric user defined prior for
                    each topic.
+
     eta: float, np.ndarray of float, list[float], str (Optional, default 'symmetric')
         A-priori belief on topic-word distributiion. This can be:
         'symmetric': Uses a fixed symmetric prior of 1.0 / num_topics
@@ -248,56 +297,64 @@ class LDAGen:
                    word.
         matrix: Matrix of shape (num_topics, num_words) to assign a probability for each word-topic
                 combination.
+
     decay: float (Optional, default 0.5)
         Number between (0.5, 1] to weight what percentage of the previous lambda value is forgotten
         when each new document is examined. Corresponds to kappa from 'Online Learning for LDA'
         by Hoffman et al.
+
     offset: float (Optional, default 64)
         Hyper-parameter that controls how much we will slow down the first steps the first few
         iterations. Corresponds to tau_0 from 'Online Learning for LDA' by Hoffman et al.
+
     eval_every: int (Optional, default None)
         Log perplexity is estimated every that many updates. Setting this to one slows down
         training by ~2x.
+
     iterations: int (Optional, default 4096)
         Maximum number of iterations through the corpus when inferring the topic distribution of a
         corpus.
+
     gamma_threshold: float (Optional, default 0.001)
         Minimum change in the value of the gamma parameters to continue iterating.
+
     random_state: np.random.RandomState, int (Optional, default 84)
         Either a randomState object or a seed to generate one. Useful for reproducibility. Note
         that results can still vary due to non-determinism in OS scheduling of the worker
         processes.
+
     minimum_probability: float (Optional, default 0.01)
         Topics with a probability lower than this threshold will be filtered out.
+
     minimum_phi_value: float (Optional, default 0.01)
         If per_word_topics is True, then this represents a lower bound on the term probabilities.
+
     per_word_topics: bool (Optional, default True)
         If True, then the model also computes a list of topics, sorted in descending order of most
         likely topics for each word, along with their phi values multiplied by the feature length.
     """
     def __init__(self,
-                 num_topics = 10,
-                 workers = None,
-                 chunksize=4096,
-                 passes=10,
-                 alpha='asymmetric',
-                 eta='symmetric',
-                 decay=0.5,
-                 offset=64,
-                 eval_every=None,
-                 iterations=4096,
-                 gamma_threshold=0.001,
-                 random_state=84,
-                 minimum_probability=0.01,
-                 minimum_phi_value=0.01,
-                 per_word_topics=True,
+                 num_topics:Optional[int]=10,
+                 workers:Optional[int]=1,
+                 chunksize:Optional[int]=4096,
+                 passes:Optional[int]=10,
+                 alpha:Optional[Union[float, list[float], str]]='asymmetric',
+                 eta:Optional[Union[float, list[float], str]]='symmetric',
+                 decay:Optional[float]=0.5,
+                 offset:Optional[float]=64,
+                 eval_every:Optional[int]=None,
+                 iterations:Optional[int]=4096,
+                 gamma_threshold:Optional[float]=0.001,
+                 random_state:Optional[int]=84,
+                 minimum_probability:Optional[float]=0.01,
+                 minimum_phi_value:Optional[float]=0.01,
+                 per_word_topics:Optional[bool]=True,
                  ):
 
         # Sets the number of workers.
         if not workers:
-            # Number of workers equal to 1 less than total physical number of cores.
+            # Number of workers equal to 2 less than total physical number of cores.
             workers = psutil.cpu_count(logical=False) - 1
-            #print(f'Number of workers {workers}')
 
         # Initialize values for the gensim LDA topic model generation.
         self.num_topics = int(num_topics)
@@ -316,7 +373,9 @@ class LDAGen:
         self.minimum_phi_value = minimum_phi_value
         self.per_word_topics = per_word_topics
 
-    def fit(self, id2word, corpus):
+    def fit(self,
+            id2word:Dictionary,
+            corpus:list[tuple[int, int]]):
         """
         Trains the gensim.models.ldamulticore.LdaMulticore model with the initialized parameters on
         the training corpus given a training corpus and associated word ID to word mapping.
@@ -326,6 +385,7 @@ class LDAGen:
         id2word: gensim.corpora.dictionary.Dictionary, dict[(int, str)]
             Mapping from word IDs to words. It is used to determine vocabulary size, as well as for
             debugging and topic printing.
+
         corpus: iterable of list[(int, float)], scipy.sparse.csc
             Stream of document vectors or sparse matrix of shape (num_documents, num_terms).
 
@@ -335,10 +395,9 @@ class LDAGen:
             A trained gensim.models.ldamulticore.LdaMulticore model.
         """
 
-        model = LdaMulticore(corpus=corpus,
+        model = LdaModel(corpus=corpus,
                          num_topics = self.num_topics,
                          id2word=id2word,
-                         workers=self.workers,
                          chunksize=self.chunksize,
                          passes=self.passes,
                          alpha=self.alpha,

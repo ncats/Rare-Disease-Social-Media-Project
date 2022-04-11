@@ -10,9 +10,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
+import gensim
+from gensim.models.coherencemodel import CoherenceModel
+from gensim.corpora.dictionary import Dictionary
+
 from utils.utils import dump_json, get_data_path, check_folder
 from _ctfidf import CTFIDF
-from lda_model import create_coherence_model
 
 def get_topic_vectors(tokenized_documents:list[list[str]],
                       corpus:list[list[tuple[int, int]]],
@@ -25,8 +28,10 @@ def get_topic_vectors(tokenized_documents:list[list[str]],
     ----------
     documents: list[list[str]]
         Tokenized list of documents.
+
     corpus: list[list[int, float]]
         Stream of document vectors made up of lists of tuples with (word_id, frequency).
+
     model: gensim.models.basemodel.BaseTopicModel
         Pre-trained topic model. Currently supports LdaModel,
         LdaMulticore, LdaMallet, and LdaVowpalWabbit.
@@ -78,8 +83,10 @@ def cluster_by_topic(documents:list[str],
     ----------
     documents: list[str]
         Filtered documents created from joining the tokens for a document together into one string.
+
     topic_vectors: list[list[float]]
         Vectors of topic probabilities for each document.
+
     num_topics: int
         Number of topics in the model.
 
@@ -118,6 +125,7 @@ def create_filtered_documents(documents:list[list[str]]) -> list[str]:
     -------
         Documents created from joining the tokens for a document together into one string.
     """
+
     return [ ' '.join(doc) for doc in documents]
 
 
@@ -137,17 +145,23 @@ def create_wordcloud(word_dict:Dict[int, Dict[str, float]],
     word_dict: Dict[int, Dict[str, float]]
         Dictionary of topic labels for keys and values being list of tuples of words and their
         scores.
+
     topic: Union[int, str]
         Label for topic used as key for word_dict[key]
+
     coherence_values_per_topic: Union[list[float], Dict[str, float]]
         Coherence values per topic. Either a list with the topic number being the index of the
         score or a dictionary where the key is the label and the score is the value.
+
     document_size: int
         Number of documents for the topic where it is the most probable topic for those documents.
+
     dict_type: str
         Type of word_dict, used for title and saving file (e.g. 'Topic Word' or 'c-TFIDF')
+
     name: str
         Name of the collection of documents for use in title and saving file (e.g. 'CysticFibrosis')
+
     path: str, Path
         Path to where the figure will be saved to.
     """
@@ -159,11 +173,10 @@ def create_wordcloud(word_dict:Dict[int, Dict[str, float]],
     plt.imshow(wordcloud)
     coherence = coherence_values_per_topic[topic]
     title = f' {name} {dict_type} Topic: {topic} Coherence: {coherence:.3f} Size: {document_size}'
-    plt.title(title,
-              fontsize='large', weight='bold')
+    plt.title(title, fontsize='large', weight='bold')
     plt.axis("off")
     plt.tight_layout()
-    plt.savefig(Path(path,f'{name}_{dict_type}_{topic}_wordcloud.png'), dpi=300)
+    plt.savefig(Path(path, f'{name}_{dict_type}_{topic}_wordcloud.png'), dpi=300)
     plt.close()
 
 def create_distplot(docs_per_topics:Dict[int, list[str]], name:str, path:Union[str,Path]):
@@ -176,8 +189,10 @@ def create_distplot(docs_per_topics:Dict[int, list[str]], name:str, path:Union[s
     docs_per_topic: Dict[int, list[str]]
         Dictionary with each key being the topic number and the value being the list of documents
         that have that topic as their top topic based on probability.
+
     name: str
         Name of the collection of documents for use in title and saving file (e.g. 'CysticFibrosis')
+
     path: str, Path
         Path to where the figure will be saved to.
     """
@@ -195,7 +210,7 @@ def create_distplot(docs_per_topics:Dict[int, list[str]], name:str, path:Union[s
     plt.ylabel('Number of Posts')
     plt.title(f'Topic Distribution for {name}', weight='bold', fontsize='large')
     plt.tight_layout()
-    plt.savefig(Path(path,f'{name}_postdistplot.png'), dpi=300)
+    plt.savefig(Path(path, f'{name}_postdistplot.png'), dpi=300)
     plt.close()
 
 def create_coherence_distplot(coherence_values_per_topic:Union[list[float],
@@ -210,8 +225,10 @@ def create_coherence_distplot(coherence_values_per_topic:Union[list[float],
     coherence_values_per_topic: Union[list[float], Dict[str, float]]
         Coherence values per topic. Either a list with the topic number being the index of the
         score or a dictionary where the key is the label and the score is the value.
+
     name: str
         Name of the collection of documents for use in title and saving file (e.g. 'CysticFibrosis')
+
     path: str, Path
         Path to where the figure will be saved to.
     """
@@ -226,8 +243,8 @@ def create_coherence_distplot(coherence_values_per_topic:Union[list[float],
     plt.savefig(Path(path,f'{name}_coherencedistplot.png'), dpi=300)
     plt.close()
 
-def create_tfidf_topic_word_list(word_score_dict:Dict[int, Dict[str, float]]
-                                 ) -> list[list[str]]:
+def create_tfidf_topic_word_list(word_score_dict:Dict[int, Dict[str, float]],
+                                 topic_word_score_dict) -> list[list[str]]:
     """
     Creates a word list of the top n words for each topic from a dictionary. For use in creating
     a coherence model for calculating coherence values.
@@ -246,6 +263,8 @@ def create_tfidf_topic_word_list(word_score_dict:Dict[int, Dict[str, float]]
     topic_word_list = []
     for topic in word_score_dict.keys():
         topic_list = list(word_score_dict[topic].keys())
+        if len(topic_list) < 2:
+            topic_list = list(topic_word_score_dict[topic].keys())
         topic_word_list.append(topic_list)
     return topic_word_list
 
@@ -260,9 +279,11 @@ def create_word_dict(topic_words:list[list[str]],
     ----------
     topic_words: list[list[str]]
         List of topics and their list of top words that make up that topic based on their scores.
+
     word_scores: list[list[float]]
         List of topics and the list of word scores that correspond to each word top word for that
         topic.
+
     topic_nums: list[int]
         List of topic numbers.
 
@@ -308,6 +329,100 @@ def create_topic_sizes_dict(topic_sizes:list[int]) -> Dict[str, int]:
     """
     return {topic: int(size) for topic, size in enumerate(topic_sizes)}
 
+def find_distribution(model:gensim.models.basemodel.BaseTopicModel,
+                      tokenized_docs:list[list[str]],
+                      corpus:list[tuple[int, int]]) -> Dict[int, list[str]]:
+    """
+    Finds the distribution of posts for each topic.
+
+    Parameters
+    ----------
+    model: gensim.models.basemodel.BaseTopicModel (Optional, default None)
+        Pre-trained topic model provided if topics not provided. Currently supports LdaModel,
+        LdaMulticore, LdaMallet, and LdaVowpalWabbit.
+
+    tokenized_docs: list[list[str]]
+        Tokenized list of documents.
+
+    corpus: list[tuple[int, int]]
+        Document vectors made up of list of tuples with (word_id, word_frequency)
+
+    Returns
+    -------
+    docs_per_topic: Dict[int, list[str]]
+        Dictionary with each key being the topic number and the value being the list of documents
+        that have that topic as their top topic based on probability.
+    """
+    # This is to weed out models in which the topics have no documents associated with them.
+
+    # Retrieves topic vectors from the model. Used to find the most probable topic for each
+    # document.
+    topic_vectors = get_topic_vectors(tokenized_documents = tokenized_docs,
+                                    corpus=corpus,
+                                    model=model)
+    # Concatenates tokenized documents into single strings.
+    f_documents = create_filtered_documents(tokenized_docs)
+    # Clusters the documents by the most probable topic for each document.
+    num_topics = model.num_topics
+    docs_per_topic = cluster_by_topic(f_documents, topic_vectors, num_topics)
+    docs_per_topic = {topic: len(docs) for topic, docs in docs_per_topic.items()}
+    return docs_per_topic
+
+def create_coherence_model(model:Optional[gensim.models.basemodel.BaseTopicModel] = None,
+                           topics:Optional[list[list[str]]] = None,
+                           texts:Optional[list[list[str]]] = None,
+                           id2word:Optional[Dictionary] = None,
+                           corpus:Optional[list[tuple[int, int]]] = None,
+                           coherence:str = 'c_v',
+                           topn:int = 10,
+                           processes:int = 1):
+    """
+    Creates a gensim.models.coherencemodel.CoherenceModel object from either a model or list of
+    tokenized topics. Used to calculate coherence of a topic.
+
+    Parameters
+    ----------
+    model: gensim.models.basemodel.BaseTopicModel (Optional, default None)
+        Pre-trained topic model provided if topics not provided. Currently supports LdaModel,
+        LdaMulticore, LdaMallet, and LdaVowpalWabbit.
+
+    topics: list[list[str]] (Optional, default None)
+        List of tokenized topics. id2word must be provided.
+
+    texts: list[list[str]] (Optional, default None)
+        Tokenized texts for use with sliding window based probability estimator ('c_something').
+
+    id2word: gensim.corpora.dictionary.Dictionary (Optional, default None)
+        If model present, not needed. If both provided, passed id2word will be used.
+
+    corpus: list[tuple[int, int]] (Optional, default None)
+        Document vectors made up of list of tuples with (word_id, word_frequency)
+
+    coherence: str (default 'c_v')
+        Currently through gensim supports following coherence measures: 'u_mass', 'c_v', 'c_uci',
+        and 'c_npmi. Coherence measure 'c_uci = 'c_pmi'.
+
+    topn: int (default 10)
+        Integer corresponding to number of top words to be extracted from each topic.
+
+    processes: int (default 1)
+        Number of processes to use, any value less than 1 will be num_cpus - 1.
+
+    Returns
+    -------
+    coherence_model: gensim.models.coherencemodel.CoherenceModel
+        CoherenceModel object used for building and maintaining a model for topic coherence.
+    """
+    coherence_model = CoherenceModel(model = model,
+                                    topics = topics,
+                                    texts = texts,
+                                    dictionary= id2word,
+                                    corpus = corpus,
+                                    coherence = coherence,
+                                    topn = topn,
+                                    processes = processes)
+    return coherence_model
+
 class AnalyzeTopics:
     """
     Class to call analysis tools to create files and visualizations to analyze the results of topic
@@ -317,19 +432,26 @@ class AnalyzeTopics:
     ----------
     model:
         Topic model. Currently either supports either model from gensim (LDA) or Top2Vec.
+
     name: str
         Name of the collection of documents for use in title and saving file (e.g. 'CysticFibrosis')
+
     tokenized_docs: list[list[str]]
         Tokenized list of documents.
+
     id2word: Dict[(int, str)]
         Mapping of word ids to words.
+
     corpus: list[tuple[int, int]]
         Document vectors made up of list of tuples with (word_id, word_frequency)
+
     model_type: str ('LDA', 'Top2Vec')
         Model type for model passed to class. Currently only supports gensim or Top2Vec models.
+
     coherence: str (default 'c_v')
         Currently through gensim supports following coherence measures: 'u_mass', 'c_v', 'c_uci',
         and 'c_npmi. Coherence measure 'c_uci = 'c_pmi'.
+
     path: Path, str (Optional, default None)
         Path to store the analysis results files to.
     """
@@ -439,10 +561,12 @@ class AnalyzeTopics:
                       self.path,
                       f'{name}_LDA_tfidf_word_score_dict')
             # Retrieves the topic words derived from c-TFIDF for each topic.
-            topic_word_list = create_tfidf_topic_word_list(tfidf_word_score_dict)
+            topic_word_list = create_tfidf_topic_word_list(tfidf_word_score_dict, word_score_dict)
+
             # Creates a coherence model using the c-TFIDF topic words for each topic.
             tfidf_c_model = create_coherence_model(topics=topic_word_list,
                                                    texts=tokenized_docs,
+                                                   corpus=corpus,
                                                    id2word=id2word,
                                                    coherence=coherence)
             # Prints the number of topics and the mean coherence of derived topics for the model

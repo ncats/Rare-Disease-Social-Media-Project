@@ -6,12 +6,17 @@ Preprocessing functions for topic generation files needed for topic modeling alg
 
 from pathlib import Path
 from typing import Any, Union, Optional
-from tqdm import tqdm
 import re
+from tqdm import tqdm
 from gensim.corpora.dictionary import Dictionary
+from gensim.models.phrases import Phrases, Phraser, ENGLISH_CONNECTOR_WORDS
 from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+
 import contractions
 from utils.utils import get_data_path, load_json, check_folder, dump_json
+
+STOP_WORDS = stopwords.words('english')
 
 def get_id2word(texts:list[str],
                 no_above:float=0.5,
@@ -147,6 +152,48 @@ def strip_junk(text:str) -> str:
 
     return text
 
+def get_phrases(tokenized_docs:list[list[str]],
+                ngram_vocab_args:Optional[dict]=None) -> list[list[str]]:
+    """
+    Creates phrases of bigrams and trigrams from the tokenized documents using Gensim. The phrases
+    replace the individual tokens. (e.g ['New', 'York'] becomes ['New York'])
+
+    Parameters
+    ----------
+    tokenized_docs: list[list[str]]
+        Tokenized list of documents.
+
+    ngram_vocab_args: dict (Optional, default None)
+        Pass custom arguments to gensim phrases.
+
+        For more information visit:
+        https://radimrehurek.com/gensim/models/phrases.html
+
+    Returns:
+        Tokenized list of documents with bigram and trigram phrases replacing related unigram
+        tokens.
+    """
+    if not ngram_vocab_args:
+        ngram_vocab_args = {'sentences':tokenized_docs,
+                            'min_count': 5,
+                            'threshold':10.0,
+                            'delimiter': ' ',
+                            'connector_words':ENGLISH_CONNECTOR_WORDS}
+    else:
+        ngram_vocab_args['sentences'] = tokenized_docs
+        ngram_vocab_args['delimiter'] = ' '
+
+    bigram = Phrases(**ngram_vocab_args)
+    bigram_mod = Phraser(bigram)
+    bigrams = [bigram_mod[doc] for doc in tqdm(tokenized_docs, desc='Creating Bigrams')]
+
+    ngram_vocab_args['sentences'] = bigrams
+    trigram = Phrases(**ngram_vocab_args)
+    trigram_mod = Phraser(trigram)
+    trigrams = [trigram_mod[doc] for doc in tqdm(bigrams, desc='Creating Trigrams')]
+
+    return trigrams
+
 def tokenize_docs(documents:list[str]) -> list[list[str]]:
     """
     Tokenizes a list of text documents for use in LDA topic model generation or coherence model
@@ -179,7 +226,7 @@ def tokenize_text(text:str) -> list[str]:
         List of str tokens (words).
     """
     text = word_tokenize(text)
-    text = [word for word in text if word.isalpha()]
+    text = [word.lower() for word in text if word.isalpha() and word not in STOP_WORDS]
 
     return text
 
@@ -196,7 +243,7 @@ def create_corpus(id2word:Dictionary,
     tokenized_docs: list[list[str]]
         Tokenized list of documents.
 
-    Returns
+    Returns:
     -------
         Stream of document vectors made up of lists of tuples with (word_id, word_frequency).
     """
@@ -214,15 +261,20 @@ class PreProcess:
     ----------
     name: str
         Name of subreddit or json file of text data.
+
     data_path: Path, str (Optional, default None)
         Path to data file where json is located.
+
     model_path: Path, str (Optional, default None)
         Path to model data where files will be written to or loaded from.
+
     no_above: float (Optional, default 0.5)
         Keep tokens (words) that are contained in no more than no_above documents, which is the
         fraction of total corpus size.
-    no_below: int (Optional, default 1)
+
+    no_below: int (Optional, default 3)
         Keep tokens (words) that are contained in at least no_below documents.
+
     keep_n: int (Optional, default 100000)
         Keep only the first keep_n most frequent tokens.
 
@@ -238,7 +290,7 @@ class PreProcess:
                  data_path:Optional[Union[Path,str]]=None,
                  model_path:Optional[Union[Path,str]]=None,
                  no_above:Optional[float] = 0.5,
-                 no_below:Optional[int] = 1,
+                 no_below:Optional[int] = 3,
                  keep_n: Optional[int] = 100000):
 
         # Initialize parameters.
@@ -301,17 +353,26 @@ class PreProcess:
                 documents = get_docs(data)
                 documents = [doc for doc in documents]
                 self.documents = get_unique(documents)
-            # Once document data is retrieved, then the tokenized documents, id2word, and corpus
-            # are generated from the data.
-            tokenized_docs = tokenize_docs(self.documents)
-            id2word = get_id2word(tokenized_docs,
-                                  no_above = self.no_above,
-                                  no_below=self.no_below,
-                                  keep_n=self.keep_n)
-            corpus = create_corpus(id2word, tokenized_docs)
+
             # Dumps the documents data to a file for retrieval and use later to preserve order of
             # documents, which is essential for reproducibility of results and analysis.
             dump_json(self.documents, self.model_path,f'{self.name}_documents')
+
+            # Once document data is retrieved, then the tokenized documents, id2word, and corpus
+            # are generated from the data.
+            tokenized_docs = tokenize_docs(self.documents)
+            # Creates bigrams and trigrams.
+            tokenized_docs = get_phrases(tokenized_docs)
+            # Saves the tokenized documents so that tokenization and ngram creation does not need
+            # to be redone each time.
             dump_json(tokenized_docs,self.model_path,f'{self.name}_tokenized_docs')
+            # Creating id2word and corpus from tokenized documents is trivial and takes almost no
+            # time and thus is not saved to a file. They are also static in relation to tokenized
+            # documents.
+            id2word = get_id2word(tokenized_docs,
+                                  no_above = self.no_above,
+                                  no_below = self.no_below,
+                                  keep_n=self.keep_n)
+            corpus = create_corpus(id2word, tokenized_docs)
 
         return self.documents, tokenized_docs, id2word, corpus
