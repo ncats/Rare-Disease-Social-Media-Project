@@ -10,17 +10,17 @@ import re
 from tqdm import tqdm
 from gensim.corpora.dictionary import Dictionary
 from gensim.models.phrases import Phrases, Phraser, ENGLISH_CONNECTOR_WORDS
+from gensim.parsing.preprocessing import STOPWORDS
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-
+from nltk.corpus import wordnet
+from nltk.stem import WordNetLemmatizer
+from nltk import pos_tag
 import contractions
 from utils.utils import get_data_path, load_json, check_folder, dump_json
 
-STOP_WORDS = stopwords.words('english')
-
 def get_id2word(texts:list[str],
-                no_above:float=0.5,
-                no_below:int=1,
+                no_above:float=1.0,
+                no_below:int=10,
                 keep_n:int=100000) -> Dictionary:
     """
     Creates a gensim.corpora.dictionary.Dictionary mapping from word IDs to words. It is used to
@@ -28,10 +28,10 @@ def get_id2word(texts:list[str],
 
     Parameters
     ----------
-    no_above: float (Optional, default 0.5)
+    no_above: float (Optional, default 1.0)
         Keep tokens (words) that are contained in no more than no_above documents, which is the
         fraction of total corpus size.
-    no_below: int (Optional, default 1)
+    no_below: int (Optional, default 10)
         Keep tokens (words) that are contained in at least no_below documents.
     keep_n: int (Optional, default 100000)
         Keep only the first keep_n most frequent tokens.
@@ -226,7 +226,7 @@ def tokenize_text(text:str) -> list[str]:
         List of str tokens (words).
     """
     text = word_tokenize(text)
-    text = [word.lower() for word in text if word.isalpha() and word not in STOP_WORDS]
+    text = [word.lower() for word in text if word.isalpha() and word not in STOPWORDS]
 
     return text
 
@@ -240,6 +240,7 @@ def create_corpus(id2word:Dictionary,
     id2word: gensim.corpora.dictionary.Dictionary, dict[(int, str)]
             Mapping from word IDs to words. It is used to determine vocabulary size, as well as for
             debugging and topic printing.
+
     tokenized_docs: list[list[str]]
         Tokenized list of documents.
 
@@ -248,6 +249,75 @@ def create_corpus(id2word:Dictionary,
         Stream of document vectors made up of lists of tuples with (word_id, word_frequency).
     """
     return [id2word.doc2bow(doc) for doc in tokenized_docs]
+
+def get_word_net_pos(tag:str) -> str:
+    """
+    Parses POS tags and returns the wordnet POS tag for use in lemmatizer.
+
+    Parameters:
+    ----------
+    tag: str
+        text of POS tag from WordNetLemmatizer.
+
+    Returns:
+    -------
+        POS tag if adjective, verb, noun, or adverb. None if other POS.
+            'J', 'V', 'N', 'R', or None
+    """
+    if tag.startswith('J'):
+        return wordnet.ADJ
+    elif tag.startswith('V'):
+        return wordnet.VERB
+    elif tag.startswith('N'):
+        return wordnet.NOUN
+    elif tag.startswith('R'):
+        return wordnet.ADV
+    else:
+        return None
+
+def lemma_text(tokenized_doc:list[str]) -> list[str]:
+    """
+    Lemmatizes tokens. Removes tokens if not adjective, adverb, noun, or verb. Removes any
+    remaining tokens if they are in STOPWORDS or not two characters or longer.
+
+    Parameters:
+    ----------
+    tokenized_doc: list[str]
+        Tokenized document.
+
+    Returns:
+    -------
+        Tokenized document.
+    """
+    # Initializes Lemmatizer.
+    lmr = WordNetLemmatizer()
+    # Tags tokens with part of speech (POS)
+    tag_tokens = pos_tag(tokenized_doc)
+    # Converts POS into wordnet adjective, verb, noun, adverb, or None.
+    tag_tokens = [(token, get_word_net_pos(pos)) for token, pos in tag_tokens]
+    # Lemmatizes tokens if POS is not None.
+    tag_tokens = [lmr.lemmatize(token, pos=tag) for token, tag in tag_tokens if tag]
+    # Removes tokens if token size is less than 2 or if they are in STOPWORDS.
+    tag_tokens = [token for token in tag_tokens if len(token) > 1 and token not in STOPWORDS]
+    return tag_tokens
+
+def get_lemma(tokenized_docs:list[list[str]]) -> list[list[str]]:
+    """
+    Tags tokens in each document with part of speech (POS) and removes if not adjective, adverb,
+    noun, or verb. Removes remaining tokens if they are in STOPWORDS or not greater than 2
+    characters in length.
+
+    Parameters
+    ----------
+    tokenized_docs: list[list[str]]
+        Tokenized list of documents.
+
+    Returns:
+    -------
+        Tokenized documents
+    """
+    tokenized_docs = [lemma_text(doc) for doc in tqdm(tokenized_docs, desc='Lemmatizing Tokens')]
+    return tokenized_docs
 
 class PreProcess:
     """
@@ -268,11 +338,11 @@ class PreProcess:
     model_path: Path, str (Optional, default None)
         Path to model data where files will be written to or loaded from.
 
-    no_above: float (Optional, default 0.5)
+    no_above: float (Optional, default 1.0)
         Keep tokens (words) that are contained in no more than no_above documents, which is the
         fraction of total corpus size.
 
-    no_below: int (Optional, default 3)
+    no_below: int (Optional, default 10)
         Keep tokens (words) that are contained in at least no_below documents.
 
     keep_n: int (Optional, default 100000)
@@ -289,8 +359,8 @@ class PreProcess:
     def __init__(self, name:str,
                  data_path:Optional[Union[Path,str]]=None,
                  model_path:Optional[Union[Path,str]]=None,
-                 no_above:Optional[float] = 0.5,
-                 no_below:Optional[int] = 3,
+                 no_above:Optional[float] = 1.0,
+                 no_below:Optional[int] = 10,
                  keep_n: Optional[int] = 100000):
 
         # Initialize parameters.
@@ -361,6 +431,8 @@ class PreProcess:
             # Once document data is retrieved, then the tokenized documents, id2word, and corpus
             # are generated from the data.
             tokenized_docs = tokenize_docs(self.documents)
+            # Lemmatizes Tokens.
+            tokenized_docs = get_lemma(tokenized_docs)
             # Creates bigrams and trigrams.
             tokenized_docs = get_phrases(tokenized_docs)
             # Saves the tokenized documents so that tokenization and ngram creation does not need
