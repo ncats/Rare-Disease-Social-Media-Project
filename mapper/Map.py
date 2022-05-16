@@ -35,6 +35,7 @@ class Map(ABC):
         self.t0 = datetime.now()
         self.root = os.getcwd()
         self.system = platform.system()
+        self.isWindows = False
         
         self.gardObj = None
         self.dataObj = list()
@@ -42,6 +43,7 @@ class Map(ABC):
 
         if self.system == 'Windows':
             self.path_char = '\\'
+            self.isWindows = True
         elif self.system == 'Linux':
             self.path_char = '/'
         elif self.system == 'Darwin':
@@ -60,9 +62,16 @@ class Map(ABC):
 
     # creates a file path to the data folder with the filename variable
     def _create_path (self,filename):
-        path = (self.root 
+        if self.isWindows == True:
+            path = (self.root
             + self.path_char 
             + 'mapper'
+            + self.path_char 
+            + 'data' 
+            + self.path_char 
+            + filename)
+        else:
+            path = (self.root
             + self.path_char 
             + 'data' 
             + self.path_char 
