@@ -4,11 +4,13 @@ import os
 from datetime import datetime
 from pathlib import Path
 from abc import ABC
-from types import NoneType
 from variables import *
 import spacy
 from spacy.matcher import PhraseMatcher
 from spacy.tokens import Doc
+from spacy.tokenizer import Tokenizer
+from spacy.lang.char_classes import ALPHA, ALPHA_LOWER, ALPHA_UPPER, CONCAT_QUOTES, LIST_ELLIPSES, LIST_ICONS
+from spacy.util import compile_infix_regex
 import threading
 import pandas as pd
 import csv
@@ -19,6 +21,11 @@ from variables import false_positives
 class Map(ABC):
     def __init__(self):
         self.counter = 0
+        self.id_list = list()
+        self.name_list = list()
+        self.context_list = list()
+        self.matches_list = list()
+        self.word_to_gard = dict()
 
         self.nlp = None
         self.matcher = None
@@ -51,6 +58,7 @@ class Map(ABC):
 
         print('Map Object Initialized')
 
+    # creates a file path to the data folder with the filename variable
     def _create_path (self,filename):
         path = (self.root 
             + self.path_char 
@@ -62,34 +70,100 @@ class Map(ABC):
 
         return path
 
+    # Converts GARD JSON object to a python dictionary
     def _clean_gard(self,data):
-        try:
+        try:  
             gard_entries = list()
             disease = dict()
-
+            syn_list = list()
+            
             for entry in data:
                 gard_entries.append(entry)
 
             for group in gard_entries:
-                entry_name = group['Name']
+                entry_name = self._normalize(group['Name'])
                 entry_id = group['GARD id']
                 syn_list = group['Synonyms']
+                disease[entry_id] = dict()
+
+                if syn_list != None:
+                    norm_syn_list = list()
+                    for syn in syn_list:
+                        norm_syn_list.append(self._normalize(syn))
+                    syn_list = norm_syn_list
+
+                disease[entry_id]['name'] = entry_name
+                disease[entry_id]['synonyms'] = syn_list
                 
-                if syn_list == None:
-                    continue
-
-                disease[entry_name] = [entry_id,syn_list]
-                self.gardObj = disease
-
+            self.gardObj = disease
             print('Gard Data Cleaned and Stored in Map Object')
 
         except Exception:
             print('[ERROR] Invalid Input Data Type:\n[TIP] Change path with \'_load()\' method')
+
+    def make_patterns(self):
+        name_patterns = list()
+        syn_patterns = list()
+
+        for id in self.gardObj:
+            text = self.gardObj[id]['name']
+            self.word_to_gard[text.lower()] = id
+            name_doc = self.nlp.make_doc(text)
+            name_patterns.append(name_doc)
+
+            if self.gardObj[id]['synonyms'] == None:
+                continue
+
+            for syn in self.gardObj[id]['synonyms']:
+                if syn in false_positives_acronyms:
+                    continue
+
+                if not syn.isupper() or len(syn) > 7:
+                    self.word_to_gard[syn.lower()] = id
+                    syn_doc = self.nlp.make_doc(syn)
+                    syn_patterns.append(syn_doc)
+
+        return [name_patterns,syn_patterns]
+
+    def _normalize(self,text):
+        text = re.sub('^\s+|\s+$', '', text)
+        text = re.sub('–', '\-', text)
+        text = re.sub("'", '\'', text)
+        text = re.sub("(and/or)", "and", text)
+        text = re.sub(' +', ' ', text) # Remove extra spaces
+        text = re.sub("[^-\w./' ]", "", text)
+        text = re.sub("(non )", "non", text)
         
+        return text
+
+    # Original SpaCy tokenizer but with one small edit to leave hyphenated words combined
+    def _custom_tokenizer(self,nlp):
+        infixes = (
+            LIST_ELLIPSES
+            + LIST_ICONS
+            + [
+                r"(?<=[0-9])[+\-\*^](?=[0-9-])",
+                r"(?<=[{al}{q}])\.(?=[{au}{q}])".format(
+                    al=ALPHA_LOWER, au=ALPHA_UPPER, q=CONCAT_QUOTES
+                ),
+                r"(?<=[{a}]),(?=[{a}])".format(a=ALPHA),
+                #r"(?<=[{a}])(?:{h})(?=[{a}])".format(a=ALPHA, h=HYPHENS), #Commented out to keep hyphenated words together ex. "non-small"
+                r"(?<=[{a}0-9])[:<>=/](?=[{a}])".format(a=ALPHA),
+            ]
+        )
+        infix_re = compile_infix_regex(infixes)
+
+        return Tokenizer(nlp.vocab, prefix_search=nlp.tokenizer.prefix_search,
+                                    suffix_search=nlp.tokenizer.suffix_search,
+                                    infix_finditer=infix_re.finditer,
+                                    token_match=nlp.tokenizer.token_match,
+                                    rules=nlp.Defaults.tokenizer_exceptions)
+    # Sets GARD file path    
     def _loadGard(self,datafile_name):
         self.gard = self._create_path(datafile_name)
         print('GARD Data file path set to {}'.format(self.gard))
 
+    # Sets Input file path
     def _loadData(self,datafile_name):
         self.data = self._create_path(datafile_name)
         print('Input Data file path set to {}'.format(self.data))
@@ -104,6 +178,7 @@ class Map(ABC):
 # Mapper for Reddit type input
 class RedditMap(Map):
 # Start of result displaying methods
+    # Displays match results after matching, relative to GARD data
     def _display_results(self):
         self.false_positives = false_positives
         self.matches = self._get_matches()
@@ -120,22 +195,24 @@ class RedditMap(Map):
             json.dump(self.rare_disease_dict, file)
             self.rare_disease_dict = None
 
+    # Loads subreddit matches file
     def _get_matches(self):
         with open(self._create_path('new_normalized_subreddit_matches.json'),'r',encoding='utf-8') as f:
                 norm = json.load(f)
                 return norm
 
+    # Returns only matches that are NOT false positives
     def _get_true_positives(self):
         return {key:value for key, value in self.matches.items()
                 if key not in self.false_positives}
 
+    # Matches the results to their respective GARD rare disease
     def _find_match(self,hit_list):
         hit_type = hit_list[0]
         hit_text = hit_list[1].lower()
         match_dict = dict()
 
         if hit_type == 'Names':
-            
             for index in self.gardObj.keys():
                 if hit_text == index.lower():
                     match_dict[self.gardObj[index][0]] = index
@@ -148,6 +225,7 @@ class RedditMap(Map):
                     
         return match_dict
 
+    # Converts match results to a dictionary
     def _find_matches(self):
         for subreddit, hits in self.true_positives.items():
             search_term_list = [(hit[0], hit[1]) for hit in hits]
@@ -169,6 +247,7 @@ class RedditMap(Map):
                                                 'text': text
                                                 }
 
+    # Gets subreddit metadata
     def _get_subreddit_data(self,subreddit):
         data = [(text, context) for text, context in self.dataObj
                 if context['name'] == subreddit]
@@ -180,6 +259,7 @@ class RedditMap(Map):
         return text, title, subscribers, created_utc
 
 # Start of mapping methods
+    # Cleans up both GARD and Input data for processing
     def _clean(self):
         try:
             with open(self.gard,'r',encoding='utf-8') as f:
@@ -192,12 +272,14 @@ class RedditMap(Map):
             
         except FileNotFoundError:
             print('[ERROR] No data and/or input file found in \'mapper/data/\' folder\n[TIP] Use Map objects \'_loadGard()\' or \'_loadData()\' method')
-
+    
+    # Converts data to a tuple then appends to a list
     def _convert_data(self,chunk):
         for text, context in chunk:
-            chunk_tuple = (text,context)
+            chunk_tuple = (self._normalize(text),context)
             self.dataObj.append(chunk_tuple)
     
+    # Converts data to a list of tuples, uses batching and threading to speed up the process
     def _clean_input(self,data):
         print('Cleaning Input Data, Please wait...')
         threads = list()
@@ -216,6 +298,7 @@ class RedditMap(Map):
         print('Input Data Cleaned and Stored in Map Object')
 
    
+    # Gathers information on each match during phrase matching
     def append_match_dict(self,doc):
         for match_id, start, end in self.matcher(doc):
             self.counter += 1
@@ -224,7 +307,7 @@ class RedditMap(Map):
             
             print(f'Subreddit: {doc._.name} Match: {pattern_type, doc[start:end]}')
             
-
+    # gets metadata of the subreddit document
     def _process_doc(self,batch):
         for doc, context in self.nlp.pipe(batch, as_tuples=True):
             doc._.name = context['name']
@@ -234,7 +317,7 @@ class RedditMap(Map):
             
             self.append_match_dict(doc)
 
-
+    # Starts phrase matching between the input and gard file, uses batching and threading to speed up the process
     def _match(self, inputFile, gardFile):
         self._loadGard(gardFile)
         self._loadData(inputFile)
@@ -245,31 +328,12 @@ class RedditMap(Map):
                 raise Exception
 
             self.nlp = spacy.load('en_core_web_lg')
+            self.nlp.tokenizer = self._custom_tokenizer(self.nlp)
             self.attr = 'LOWER'
             self.matcher = PhraseMatcher(self.nlp.vocab, attr=self.attr)
 
             print('Making Doc Objects...')
-           
-            names = list()
-            syn_list = list()
-            name_patterns = list()
-            syn_patterns = list()
-
-            for name in self.gardObj:
-                names.append(name)
-
-                for syn in self.gardObj[name][1]:
-                    if syn in false_positives_acronyms:
-                        continue
-
-                    if not syn.isupper() or len(syn) > 7:
-                        syn_list.append(syn)
-
-            for name in names:
-                name_patterns.append(self.nlp.make_doc(name))
-
-            for syn in syn_list:
-                syn_patterns.append(self.nlp.make_doc(syn))
+            name_patterns,syn_patterns = self.make_patterns()
 
             self.matcher.add('Names', name_patterns)
             self.matcher.add('Synonyms', syn_patterns)
@@ -308,9 +372,8 @@ class RedditMap(Map):
 
 
 # Mapper for Article Abstract type input
-
-# find what GARD ids show up in the abstracts, sensitivity, false positive, time
 class AbstractMap(Map):
+    # Normalizes Abstract strings and stores dataframe as a list of tuples
     def _clean(self):
         file_path = self.data.split(self.path_char)
         file_split = file_path[len(file_path)-1].split('.')
@@ -331,13 +394,14 @@ class AbstractMap(Map):
                     reader = csv.reader(csvfile, quotechar='\"')
                     writer = csv.writer(cleanfile)
 
+                    # Normalizes the Abstract column data
                     for row in reader:
-                        cleaned_abstract = row[1].replace(',','').replace('\"','')
-                        cleaned_abstract = re.sub(' +', ' ', cleaned_abstract) 
-
-                        if row[1].lower() == 'no abstract provided':
+                        if row[1].lower() == 'no abstract provided': # Removes empty abstracts from final product
                             continue
 
+                        cleaned_abstract = row[1]
+                        cleaned_abstract = self._normalize(cleaned_abstract)
+        
                         writer.writerow([row[0],cleaned_abstract])
 
             self.dataObj = pd.read_csv(self._create_path('cleaned_abstracts.csv'),dtype=str)
@@ -350,64 +414,88 @@ class AbstractMap(Map):
             print(row[0])
             print(e)
 
+    # Gathers information on each match during phrase matching
     def append_match_dict(self,doc):
         for match_id, start, end in self.matcher(doc):
-            self.counter += 1
             pattern_type = self.nlp.vocab.strings[match_id]
             self.matches[doc._.id] = list(set(self.matches.get(doc._.id, []) + [(pattern_type, str(doc[start:end]))]))
-            
-            print(f'Abstract: {doc._.id} Phrase: {doc[start-5:end+5]} Word: {doc[start:end]}')
-            print('\n')
-            
 
+            self.id_list.append(str(doc._.id))
+            self.name_list.append(str(doc[start:end]))
+
+            if end + 10 > len(doc):
+                self.context_list.append(str(doc[len(doc)-10:len(doc)]))
+            elif start - 10 < 0:
+                self.context_list.append(str(doc[0:start+10]))
+            else:
+                self.context_list.append(str(doc[start-10:end+10]))
+
+            
+    # gets metadata of the subreddit document
     def _process_doc(self,batch):
         for ABSTRACT,ID in self.nlp.pipe(batch, as_tuples=True):
+            self.counter += 1
             ABSTRACT._.id = ID
+
+            if self.counter % 1000 == 0:
+                percentage = round((self.counter/len(self.dataObj))*100)
+                print(f'{percentage}%')
+
             self.append_match_dict(ABSTRACT)
 
+    def _clean_csv(self, df):
+        # Creates new columns #DISEASE and #OCCUR
+        d = df.value_counts(subset=['APPLICATION_ID','Matched_Word']).to_frame()
+        n = df.drop_duplicates(['APPLICATION_ID', 'Matched_Word']).value_counts(subset=['APPLICATION_ID']).to_frame()
+        t1 = pd.merge(df,n,on=['APPLICATION_ID'])
+        t2 = pd.merge(t1,d,on=['APPLICATION_ID','Matched_Word'])
+
+        # Adds names for new columns
+        t2.columns = ['APPLICATION_ID', 'Abstract', 'Matched_Word', 'CONTEXT', 'GARD_id', '#DISEASE', '#OCCUR']
+        t2 = t2[['APPLICATION_ID', 'Abstract', 'Matched_Word', 'CONTEXT', 'GARD_id', '#OCCUR', '#DISEASE']]
+
+        # Saves a version of the file with repeating rows
+        t2.to_csv('mapper\\data\\abstract_matches_w_dupes.csv', index=False)
+
+        # Drops duplicate rows
+        t3 = t2.drop_duplicates(['APPLICATION_ID','Matched_Word'])
+        t3['Matched_Word'] = t3['Matched_Word'].str.lower()
+        t4 = t3.drop_duplicates(subset=['APPLICATION_ID','Matched_Word'], keep='first')
+
+        # Saves CSV file
+        t4.to_csv('mapper\\data\\abstract_matches.csv', index=False)
+        
+        # Below lines are just for testing purposes
+        df = pd.read_csv('mapper\\data\\abstract_matches.csv',index_col=False)
+        print(df)
+
+    # Starts phrase matching between the input and gard file, uses batching and threading to speed up the process
     def _match(self, inputFile, gardFile):
         self._loadGard(gardFile)
         self._loadData(inputFile)
         self._clean()
-        
+
         try:
             if self.gardObj == None or self.dataObj == None:
                 raise Exception
 
+            # Loads SpaCy package with the custom tokenizer
             self.nlp = spacy.load('en_core_web_lg')
+            self.nlp.tokenizer = self._custom_tokenizer(self.nlp)
             self.attr = 'LOWER'
             self.matcher = PhraseMatcher(self.nlp.vocab, attr=self.attr)
-
             Doc.set_extension('id', default = None)
 
             print('Making Doc Objects...')
-           
-            names = list()
-            syn_list = list()
-            name_patterns = list()
-            syn_patterns = list()
+            name_patterns,syn_patterns = self.make_patterns()
+            
+            # Adds normalized GARD data to PhraseMatcher object
+            self.matcher.add('name', name_patterns)
+            self.matcher.add('synonyms', syn_patterns)
 
-            for name in self.gardObj:
-                names.append(name)
-
-                for syn in self.gardObj[name][1]:
-                    if syn in false_positives_acronyms:
-                        continue
-
-                    if not syn.isupper() or len(syn) > 7:
-                        syn_list.append(syn)
-
-            for name in names:
-                name_patterns.append(self.nlp.make_doc(name))
-
-            for syn in syn_list:
-                syn_patterns.append(self.nlp.make_doc(syn))
-
-            self.matcher.add('Names', name_patterns)
-            self.matcher.add('Synonyms', syn_patterns)
+            print('Matching Doc Objects')
 
             threads = list()
-            
             for i in range(0,len(self.dataObj),1000):
                 batch_json = self.dataObj[i:i+1000]
                 thread = threading.Thread(target=self._process_doc, args=[batch_json])
@@ -423,12 +511,23 @@ class AbstractMap(Map):
             with open(self._create_path('new_normalized_abstract_matches.json'), mode= 'w+', encoding='utf-8') as file:
                 print(len(self.matches))
                 json.dump(self.matches, file)
-                self.dataObj = None
+
+            with open(self._create_path('abstract_matches.csv'), 'w', newline='') as mfile:
+                match_writer = csv.writer(mfile)
+                match_writer.writerow(['APPLICATION_ID', 'Abstract', 'Matched_Word','CONTEXT','GARD_id'])
+                c = 0
+                
+                for entry in self.id_list:
+                    for abs in self.dataObj:
+                        if abs[1] == entry:
+                            match_writer.writerow([entry, abs[0], self.name_list[c], self.context_list[c], self.word_to_gard[self.name_list[c].lower()]])
+                    
+            df = pd.read_csv(self._create_path('abstract_matches.csv'),index_col=False)
+            df.groupby(['APPLICATION_ID', 'Matched_Word']).agg('count')
+            self._clean_csv(df)
 
         except FileNotFoundError:
             print('empty data objects')
 
     def __del__(self):
         self.dataObj = None
-    
-
