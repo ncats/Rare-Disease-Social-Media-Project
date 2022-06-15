@@ -1,6 +1,5 @@
 from AbstractMap import AbstractMap
 from RedditMap import RedditMap
-from FalsePositives import FalsePositives
 
 if __name__ == '__main__':
     map = AbstractMap()

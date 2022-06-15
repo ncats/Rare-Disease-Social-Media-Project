@@ -1,7 +1,6 @@
 import platform
 import os
 from datetime import datetime
-from pathlib import Path
 from abc import ABC
 import spacy
 from spacy.matcher import PhraseMatcher
@@ -70,8 +69,10 @@ class Map(ABC):
                 + self.path_char 
                 + 'mapper'
                 + self.path_char 
+                + 'bin' 
+                + self.path_char
                 + 'data' 
-                + self.path_char 
+                + self.path_char
                 + 'input'
                 + self.path_char 
                 + filename)
@@ -88,6 +89,8 @@ class Map(ABC):
                 path = (self.root
                 + self.path_char 
                 + 'mapper'
+                + self.path_char 
+                + 'bin' 
                 + self.path_char 
                 + 'data' 
                 + self.path_char 
@@ -152,8 +155,8 @@ class Map(ABC):
             self.gardObj = disease
             print('Gard Data Cleaned and Stored in Map Object')
 
-        except FileNotFoundError:
-            print('[ERROR] Invalid Input Data Type:\n[TIP] Change path with \'_load()\' method')
+        except FileNotFoundError as e:
+            print(e)
     
     def setup_nlp(self):
         self.nlp = spacy.load('en_core_web_lg')

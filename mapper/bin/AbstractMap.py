@@ -52,7 +52,7 @@ class AbstractMap(Map.Map):
             print(row['Abstract'])
 
         except FileNotFoundError:
-            print('[ERROR] No data and/or input file found in \'mapper/data/\' folder\n[TIP] Use Map objects \'_loadGard()\' or \'_loadData()\' method')
+            print('[ERROR] No data and/or input file found in \'mapper/bin/data/\' folder')
         except UnicodeDecodeError as e:
             print(row[0])
             print(e)
