@@ -87,8 +87,10 @@ if __name__ == "__main__":
     SCHEME = "bolt"  # BoltDriver with no encryption
     HOST_NAME = "disease.ncats.io"
     PORT = 80
+    
     url = f"{SCHEME}://{HOST_NAME}:{PORT}"
     app = App(url)
+
     query_result = app.find_gard_data()
     dump_json(query_result, app.path, 'neo4j_rare_disease_list')
     app.close()

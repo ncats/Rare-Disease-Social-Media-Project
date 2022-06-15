@@ -11,6 +11,7 @@ from typing import Union
 
 
 def load_json(path):
+    print(path)
     """
     Loads jsons given a path.
 
