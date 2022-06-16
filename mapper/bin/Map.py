@@ -230,36 +230,7 @@ class Map(ABC):
 
         return text
 
-    #Not Used
-    def write_roman(self, num):
-        num = int(num.group(0))
-        roman = OrderedDict()
-
-        if num > 10:
-            return str(num)
-
-        roman[10] = "X"
-        roman[9] = "IX"
-        roman[5] = "V"
-        roman[4] = "IV"
-        roman[1] = "I"
-
-        def roman_num(num):
-            for r in roman.keys():
-                x, y = divmod(num, r)
-                yield roman[r] * x
-                num -= (r * x)
-                if num <= 0:
-                    break
-
-        return "".join([a for a in roman_num(num)])
-
-    #Not Used
-    def number_to_roman(self, text):
-        new = re.sub(r"\d+",self.write_roman, text)
-        return new
-
-
+    # Combines all the normalization functions into one function
     def _normalize(self,text):
         text = re.sub(r'^\s+|\s+$', '', text)
         text = re.sub(r'[\s\t]+', ' ', text)

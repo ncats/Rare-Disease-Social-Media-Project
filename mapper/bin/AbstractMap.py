@@ -41,10 +41,7 @@ class AbstractMap(Map.Map):
                 cleaned_abstract = self._normalize(ABSTRACT)
                 temp.at[i,'Abstract'] = cleaned_abstract
                 
-            print(temp)   
-            #self.dataObj = temp.reindex(sorted(temp.columns, reverse=True), axis='columns')
             self.dataObj = temp[['Abstract','Application_ID']]
-            print(self.dataObj)
             self.dataObj = [tuple(row) for row in self.dataObj.to_numpy()]
             
         except AttributeError as e:
@@ -120,6 +117,7 @@ class AbstractMap(Map.Map):
         self.false_positives._clear()
         self.false_positives._clear(acronyms=True)
 
+        # Adds common false positives to a list to ignore when matching
         self.false_positives._add('type ii')
         self.false_positives._add('type II')
         self.false_positives._add('type 2')
@@ -130,8 +128,6 @@ class AbstractMap(Map.Map):
         self.false_positives._add('ML 2')
 
         self._clean()
-
-        #print(self.gardObj)
 
         try:
             if self.gardObj == None or self.dataObj == None:
