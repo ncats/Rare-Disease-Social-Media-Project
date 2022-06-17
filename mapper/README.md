@@ -1,7 +1,7 @@
 # Introduction
 NormMap V2 is a python based package which maps a specific data source to a rare disease(s). NormMap V2 is the second version of NormMap which features several improvements from the previous algorithm such as parallel processing and different mapping methods such as using the `SpaCy` PhraseMatcher package 
 
-![UML](doc/UML_Mapper.png)
+![UML](doc/img/UML_Mapper.png)
 
 ## Required packages
 ```
@@ -14,7 +14,7 @@ spacy==3.2.1
 #### Rare Disease Data
 - json
 #### Data to map to rare diseases
-- txt
+- txt (seperated by tabs)
 - csv
 - xlsx
 ### Subreddit Mapper
@@ -22,6 +22,21 @@ spacy==3.2.1
 - json
 #### Data to map to rare diseases 
 - json
+
+## Expected structure of input data
+### Abstract data
+Data contains 2 columns, `Application_ID` and `Abstract`
+![expected](doc/img/input_expected.PNG)
+
+The data columns must be spelled exactly as shows for the program to work
+
+`Application_ID` is the unique identifier for the abstract
+`Abstract` is the full text of the abstract
+### Subreddit data
+List of lists, each list only contains 2 elements, the first being the subreddit text, and the second being a python dictionary of metadata 
+### Rare Disease data
+Only accepts JSON data. A list of Python dictionaries
+![expected_rd](doc/img/input_expected_rd.PNG)
 
 ## Matching with NormMap V2
 The only function you will need to match is `_match()` once the specific object is instantiated
@@ -47,6 +62,8 @@ Stores the data used to map. The rare diseases list necessary for mapping comes 
 Stores all output from NormMap V2
 ## `doc` folder
 Contains all of the documentation for NormMap V2. More detailed documentation is stored [here](doc/Mapper_Description.docx)
+## `img` folder
+Contains images for documentation purposes
 ## `__init__.py`
 Placeholder and example file that can be used to run the mapping process
 ## `Map.py`

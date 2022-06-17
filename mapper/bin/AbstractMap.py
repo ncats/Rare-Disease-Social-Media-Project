@@ -21,9 +21,14 @@ class AbstractMap(Map.Map):
                 g = json.load(f)
             self._clean_gard(g)
 
-           
-            df = pd.read_csv(self.data, sep='\t', encoding = 'latin1')
-            df = df.drop('Year', axis=1)
+            if file_type == 'txt':
+                df = pd.read_csv(self.data, sep='\t', encoding = 'latin-1')
+            else:
+                df = pd.read_csv(self.data, encoding = 'latin-1')
+
+            if 'Year' in df.columns:
+                df = df.drop('Year', axis=1)
+
             df[['Application_ID', 'Abstract']] = df[['Application_ID', 'Abstract']].astype(str)
             print(df)
             
@@ -37,7 +42,6 @@ class AbstractMap(Map.Map):
                 if ABSTRACT.lower() == 'no abstract provided': # Removes empty abstracts from final product
                     continue
 
-            
                 cleaned_abstract = self._normalize(ABSTRACT)
                 temp.at[i,'Abstract'] = cleaned_abstract
                 
@@ -177,7 +181,8 @@ class AbstractMap(Map.Map):
             print(e)
             match_writer.writerow([entry, self.name_list[c], self.context_list[c]])
 
-        except FileNotFoundError:
+        except FileNotFoundError as e:
+            print(e)
             print('empty data objects')
 
     def __del__(self):
