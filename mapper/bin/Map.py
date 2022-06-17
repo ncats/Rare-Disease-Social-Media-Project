@@ -58,6 +58,7 @@ class Map(ABC):
 
         print('Map Object Initialized')
 
+    # Calculates a systems maximum allowed batch size, currently is set to a static number until it is implemented
     def calc_batch(self):
         return 100000
 
@@ -108,6 +109,7 @@ class Map(ABC):
 
         return path
 
+    # batches data and multi-threads a function, for parallel processing
     def batch_thread(self, obj, funct, size):
         threads = list()
         for i in range(0,len(obj),size):
@@ -158,12 +160,14 @@ class Map(ABC):
         except FileNotFoundError as e:
             print(e)
     
+    # initializes SpaCy NLP package with custom tokenizer and language model
     def setup_nlp(self):
         self.nlp = spacy.load('en_core_web_lg')
         self.nlp.tokenizer = self._custom_tokenizer(self.nlp)
         self.attr = 'LOWER'
         self.matcher = PhraseMatcher(self.nlp.vocab, attr=self.attr)
 
+    # returns a list of rare disease names and synonyms SpaCy Doc objects for use in matching
     def make_patterns(self):
         name_patterns = list()
         syn_patterns = list()
@@ -189,6 +193,7 @@ class Map(ABC):
 
         return [name_patterns,syn_patterns]
 
+    # Identifies text as an acronym or not
     def is_acronym(self, text, mix=True):
         res = True
         tokens = re.split('[-/]', text)
@@ -203,8 +208,11 @@ class Map(ABC):
 
         return res
 
+    # Removes parenthesis and the words inside of them of text if certain criteria are met
     def remove_parenthesis(self, text, delete=False):
         edit = text
+
+        # if the standardized genome format is found, dont delete the parenthesis
         ms = list(re.finditer(r'(?:Del|I|Dup)\w*\([\w\.]+\)\([\w\.]+\)', text, flags=re.I))
         
         if not ms:
@@ -220,6 +228,7 @@ class Map(ABC):
                         if word == fp:
                             delete = True
 
+                # if the text inside a parenthesis is an acronym or contains a false positive, delete it
                 if self.is_acronym(selected_phrase) or delete:
                     edit = text[:x] + text[y:]
                     
@@ -278,8 +287,10 @@ class Map(ABC):
         self.data = self._create_path(datafile_name, input_file=True)
         print('Input Data file path set to {}'.format(self.data))
 
+    # prints out GARD data (TESTING PURPOSES)
     def _gardData(self):
         print(self.gardObj)
 
+    # prints out Input data (TESTING PURPOSES)
     def _inputData(self):
         print(self.dataObj)
