@@ -8,6 +8,10 @@ NormMap V2 is a python based package which maps a specific data source to a rare
 pandas==1.4.2
 spacy==3.2.1
 ```
+NormMap V2 uses the SpaCy's `en_core_web_lg` language model and will also have to be installed
+```
+python -m spacy download en_core_web_lg
+```
 
 ## Accepted input file types
 ### Abstract Mapper
@@ -26,6 +30,7 @@ spacy==3.2.1
 ## Expected structure of input data
 ### Abstract data
 Data contains 2 columns, `Application_ID` and `Abstract`
+
 ![expected](doc/img/input_expected.PNG)
 
 The data columns must be spelled exactly as shows for the program to work
@@ -35,12 +40,18 @@ The data columns must be spelled exactly as shows for the program to work
 ### Subreddit data
 List of lists, each list only contains 2 elements, the first being the subreddit text, and the second being a python dictionary of metadata 
 ### Rare Disease data
-Only accepts JSON data. A list of Python dictionaries
+Retrieved from https://disease.ncats.io
+
+Only accepts JSON data. A list of Python dictionaries. The only data that is used by the current NormMap V2 algorithm is `GARD id`, `Name` and `Synonyms`
 ![expected_rd](doc/img/input_expected_rd.PNG)
 
 ## Matching with NormMap V2
-The only function you will need to match is `_match()` once the specific object is instantiated
+### Importing the class
+```from AbstractMap import AbstractMap```
+OR
+```from RedditMap import RedditMap```
 
+The only function you will need to match is `_match()` once the specific object is instantiated
 For example if you wanted to match with Abstract data:
 ```
 map = AbstractMap()
