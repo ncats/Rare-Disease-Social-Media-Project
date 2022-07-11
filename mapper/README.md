@@ -29,14 +29,10 @@ python -m spacy download en_core_web_lg
 
 ## Expected structure of input data
 ### Abstract data
-Data contains 2 columns, `Application_ID` and `Abstract`
+CSV, Excel, or TXT format only
 
-![expected](doc/img/input_expected.PNG)
-
-The data columns must be spelled exactly as shows for the program to work
-
-`Application_ID` is the unique identifier for the abstract
-`Abstract` is the full text of the abstract
+`IDcol` is the unique identifier column for the text
+`TEXTcols` is all the column names in a list that contain the text you want to search for rare diseases in
 ### Subreddit data
 List of lists, each list only contains 2 elements, the first being the subreddit text, and the second being a python dictionary of metadata 
 ### Rare Disease data
