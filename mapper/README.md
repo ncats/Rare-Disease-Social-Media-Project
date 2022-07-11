@@ -55,9 +55,18 @@ The only function you will need to match is `_match()` once the specific object 
 For example if you wanted to match with Abstract data:
 ```
 map = AbstractMap()
-map._match('filtered_abs.txt','neo4j_rare_disease_list.json')
+map._match('abstracts.csv','disease_list.json')
 ```
 Parameter 1 is the file you want to be mapped and parameter 2 is the rare disease data
+
+```
+map = AbstractMap()
+map._match('abstracts.csv','disease_list.json', IDcol='col0', TEXTcols=['col1','col2','col3','col4'])
+```
+`IDcol` is an optional parameter that lets you set the column to be used as a unique identifier
+`TEXTcols` is an optional parameter that lets you set the the column OR columns to be used as the text to be processed
+
+DEFAULT COLUMNS ARE `Application_ID` for the unique identifier column and `Abstract` for the text column
 
 ## Adding different types of data to be mapped
 Part of NormMap V2's improvements is the ability to easily expand different types of data beyond Abstract and Subreddit data. To do this you will need to make another class and have it inherit the `Map` class and override the `_match()` method and use the inherited methods from the `Map` for normalization and matching

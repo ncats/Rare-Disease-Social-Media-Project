@@ -29,28 +29,33 @@ class AbstractMap(Map.Map):
             if 'Year' in df.columns:
                 df = df.drop('Year', axis=1)
 
-            df[['Application_ID', 'Abstract']] = df[['Application_ID', 'Abstract']].astype(str)
+            df[self.cols] = df[self.cols].astype(str)
+            df = df[self.cols]
+
             print(df)
             
-            # Normalizes the Abstract column data
+            # Normalizes the text column data
             r,c = df.shape
-            temp = df
+            tempObj = list()
+
             for i in range(r):
                 row = df.iloc[i]
-                ABSTRACT = row["Abstract"]
-                
-                if ABSTRACT.lower() == 'no abstract provided': # Removes empty abstracts from final product
-                    continue
+                #text_list = list()
 
-                cleaned_abstract = self._normalize(ABSTRACT)
-                temp.at[i,'Abstract'] = cleaned_abstract
+                for col in self.TEXTcols:
+                    ABSTRACT = row[col]
+                    cleaned_abstract = self._normalize(ABSTRACT)
+                    #text_list.append(cleaned_abstract)
+                    tempObj.append((cleaned_abstract, [col, row[self.IDcol]]))
                 
-            self.dataObj = temp[['Abstract','Application_ID']]
-            self.dataObj = [tuple(row) for row in self.dataObj.to_numpy()]
+            self.dataObj = tempObj
+
+            #self.dataObj = [tuple(txt,ID) for row in self.dataObj.to_numpy()]
             
+
         except AttributeError as e:
             print(e)
-            print(row['Abstract'])
+            print(row[col])
 
         except FileNotFoundError:
             print('[ERROR] No data and/or input file found in \'mapper/bin/data/\' folder')
@@ -65,6 +70,7 @@ class AbstractMap(Map.Map):
             self.matches[doc._.id] = list(set(self.matches.get(doc._.id, []) + [(pattern_type, str(doc[start:end]))]))
 
             self.id_list.append(str(doc._.id))
+            self.col_match_list.append(str(doc._.col))
             self.name_list.append(str(doc[start:end]))
 
             if end + 10 > len(doc):
@@ -77,34 +83,79 @@ class AbstractMap(Map.Map):
             
     # gets metadata of the subreddit document
     def _process_doc(self,batch):
-        for ABSTRACT, ID in self.nlp.pipe(batch, as_tuples=True):
+        for TEXT, DATA in self.nlp.pipe(batch, as_tuples=True):
             self.counter += 1
-            ABSTRACT._.id = ID
+            TEXT._.id = DATA[1]
+            TEXT._.col = DATA[0]
 
             if self.counter % 1000 == 0:
                 percentage = round((self.counter/len(self.dataObj))*100)
                 print(f'{percentage}%')
 
-            self.append_match_dict(ABSTRACT)
+            self.append_match_dict(TEXT)
 
     def _clean_csv(self, df):
         # Creates new columns #DISEASE and #OCCUR
-        d = df.value_counts(subset=['APPLICATION_ID','Matched_Word']).to_frame()
-        n = df.drop_duplicates(['APPLICATION_ID', 'Matched_Word']).value_counts(subset=['APPLICATION_ID']).to_frame()
-        t1 = pd.merge(df,n,on=['APPLICATION_ID'])
-        t2 = pd.merge(t1,d,on=['APPLICATION_ID','Matched_Word'])
+        d = df.value_counts(subset=['ID','Matched_Word']).to_frame()
+        n = df.drop_duplicates(['ID', 'Matched_Word']).value_counts(subset=['ID']).to_frame()
+        t1 = pd.merge(df,n,on=['ID'])
+        t2 = pd.merge(t1,d,on=['ID','Matched_Word'])
 
         # Adds names for new columns
-        t2.columns = ['APPLICATION_ID', 'Matched_Word', 'CONTEXT', 'GARD_id', '#DISEASE', '#OCCUR']
-        t2 = t2[['APPLICATION_ID', 'Matched_Word', 'CONTEXT', 'GARD_id', '#OCCUR', '#DISEASE']]
+        t2.columns = ['ID', 'COLUMN', 'Matched_Word', 'CONTEXT', 'GARD_id', '#DISEASE', '#OCCUR']
+        t2 = t2[['ID', 'COLUMN', 'Matched_Word', 'CONTEXT', 'GARD_id', '#OCCUR', '#DISEASE']]
 
         # Saves a version of the file with repeating rows
         t2.to_csv(self._create_path('abstract_matches_w_dupes.csv', input_file=False), index=False)
 
         # Drops duplicate rows
-        t3 = t2.drop_duplicates(['APPLICATION_ID','Matched_Word'])
+        t3 = t2.drop_duplicates(['ID','GARD_id','COLUMN'])
         t3['Matched_Word'] = t3['Matched_Word'].str.lower()
-        t4 = t3.drop_duplicates(subset=['APPLICATION_ID','Matched_Word'], keep='first')
+        t4 = t3.drop_duplicates(subset=['ID','GARD_id','COLUMN'], keep='first')
+
+        # Calculates weights of matches
+        t4['WEIGHT'] = pd.Series()
+        t4 = t4.reset_index(drop=True)
+        print(t4)
+
+        seen = list()
+        r,c = t4.shape
+        for num in range(r):
+            row = t4.iloc[num]
+            ID = row['ID']
+            
+            COLUMN = row['COLUMN']
+            OCCUR = row['#OCCUR']
+            DISEASE = row['#DISEASE']
+            COL_ORDER = self.cols.index(COLUMN)
+            
+            WEIGHT = (((100 - int(DISEASE)) - (COL_ORDER*COL_ORDER)) + int(OCCUR))
+
+            row['WEIGHT'] = WEIGHT
+            t4.iloc[num] = row
+
+        for idx in range(r):
+            row = t4.iloc[idx]
+            ID = row['ID']
+            if ID in seen:
+                continue
+            rows = t4.loc[t4['ID'] == ID]
+            MAX = int(rows[['WEIGHT']].max())
+            MIN = int(rows[['WEIGHT']].min())
+        
+            for i,entry2 in rows.iterrows():
+                
+                WEIGHT = entry2['WEIGHT']
+                try:
+                    Norm_WEIGHT = ((WEIGHT - MIN)/(MAX - MIN))
+                except ZeroDivisionError:
+                    Norm_WEIGHT = 1
+
+                entry2['WEIGHT'] = Norm_WEIGHT
+                t4.iloc[i] = entry2
+
+            seen.append(ID)
+        print(t4)    
 
         # Saves CSV file
         t4.to_csv(self._create_path('abstract_matches.csv', input_file=False), index=False)
@@ -114,23 +165,21 @@ class AbstractMap(Map.Map):
         print(df)
 
     # Starts phrase matching between the input and gard file, uses batching and threading to speed up the process
-    def _match(self, inputFile, gardFile):
+    def _match(self, inputFile, gardFile, IDcol=False, TEXTcols=False):
+        if IDcol:
+            self.IDcol = IDcol
+        else:
+            self.IDcol = 'Application_ID'
+        if TEXTcols:
+            self.TEXTcols = TEXTcols
+        else:
+            self.TEXTcols = ['Abstract']
+        
+        self.cols.extend(self.TEXTcols)
+        self.cols.append(self.IDcol)
+
         self._loadGard(gardFile)
         self._loadData(inputFile)
-
-        self.false_positives._clear()
-        self.false_positives._clear(acronyms=True)
-
-        # Adds common false positives to a list to ignore when matching
-        self.false_positives._add('type ii')
-        self.false_positives._add('type II')
-        self.false_positives._add('type 2')
-        self.false_positives._add('former')
-        self.false_positives._add('formerly')
-        self.false_positives._add('subtype')
-        self.false_positives._add('type')
-        self.false_positives._add('ML 2')
-
         self._clean()
 
         try:
@@ -140,6 +189,7 @@ class AbstractMap(Map.Map):
             # Loads SpaCy package with the custom tokenizer
             self.setup_nlp()
             Doc.set_extension('id', default = None)
+            Doc.set_extension('col', default = None)
 
             print('Making Doc Objects...')
 
@@ -158,23 +208,21 @@ class AbstractMap(Map.Map):
 
             with open(self._create_path('abstract_matches.csv', input_file=False), 'w', newline='') as mfile:
                 match_writer = csv.writer(mfile)
-                match_writer.writerow(['APPLICATION_ID', 'Matched_Word','CONTEXT','GARD_id'])
+                match_writer.writerow(['ID','COLUMN','Matched_Word','CONTEXT','GARD_id'])
                 c = 0
                 
                 for entry in self.id_list:
-                #for abs in self.dataObj:
-                    #if abs[1] == entry:
                     try:
-                        match_writer.writerow([entry, self.name_list[c], self.context_list[c], self.word_to_gard[self.name_list[c].lower()]])
+                        match_writer.writerow([entry, self.col_match_list[c], self.name_list[c], self.context_list[c], self.word_to_gard[self.name_list[c].lower()]])
                         c += 1
                     except KeyError as e:
                         print(e)
-                        match_writer.writerow([entry, self.name_list[c], self.context_list[c]])
+                        match_writer.writerow([entry, self.col_match_list[c], self.name_list[c], self.context_list[c]])
                         c += 1
                         continue
 
-            df = pd.read_csv(self._create_path('abstract_matches.csv', input_file=False),index_col=False)
-            df.groupby(['APPLICATION_ID', 'Matched_Word']).agg('count')
+            df = pd.read_csv(self._create_path('abstract_matches.csv', input_file=False),index_col=False, encoding='latin-1', error_bad_lines=False)
+            df.groupby(['ID', 'Matched_Word']).agg('count')
             self._clean_csv(df)
 	
         except KeyError as e:

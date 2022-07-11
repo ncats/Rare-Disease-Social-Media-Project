@@ -4,31 +4,52 @@ from datetime import datetime
 from abc import ABC
 import spacy
 from spacy.matcher import PhraseMatcher
-from spacy.tokens import Doc
+#from spacy.tokens import Doc
 from spacy.tokenizer import Tokenizer
 from spacy.lang.char_classes import ALPHA, ALPHA_LOWER, ALPHA_UPPER, CONCAT_QUOTES, LIST_ELLIPSES, LIST_ICONS
 from spacy.util import compile_infix_regex
-from collections import OrderedDict
+#from collections import OrderedDict
 import threading
 import re
 from FalsePositives import FalsePositives
 
 # Base mapper class, common properties in all child classes will be inherited
 class Map(ABC):
-    def __init__(self):
+    def __init__(self, fp=None):
         self.counter = 0
         self.id_list = list()
+        self.col_match_list = list()
         self.name_list = list()
         self.context_list = list()
         self.matches_list = list()
         self.word_to_gard = dict()
         self.normalize_dict = dict()
+        self.IDcol = str()
+        self.TEXTcols = list()
+        self.cols = list()
 
         self.nlp = None
         self.matcher = None
         self.attr = None
         self.matches = dict()
-        self.false_positives = FalsePositives()
+
+        if fp and isinstance(fp,FalsePositives):
+            self.false_positives = fp
+            
+        else:
+            self.false_positives = FalsePositives()
+            self.false_positives._clear()
+            self.false_positives._clear(acronyms=True)
+
+            # Adds common false positives to a list to ignore when matching
+            self.false_positives._add('type ii')
+            self.false_positives._add('type II')
+            self.false_positives._add('type 2')
+            self.false_positives._add('former')
+            self.false_positives._add('formerly')
+            self.false_positives._add('subtype')
+            self.false_positives._add('type')
+            self.false_positives._add('ML 2')
 
         self.t0 = datetime.now()
         self.root = os.getcwd()
@@ -60,7 +81,7 @@ class Map(ABC):
 
     # Calculates a systems maximum allowed batch size, currently is set to a static number until it is implemented
     def calc_batch(self):
-        return 100000
+        return 1000
 
     # creates a file path to the data folder with the filename variable
     def _create_path (self,filename,input_file):
@@ -114,7 +135,7 @@ class Map(ABC):
         threads = list()
         for i in range(0,len(obj),size):
                 batch_json = obj[i:i + size]
-            
+                #print(batch_json)
                 thread = threading.Thread(target=funct, args=(batch_json,))
 
                 thread.daemon = True
@@ -239,10 +260,15 @@ class Map(ABC):
 
         return text
 
+    def remove_tags(self, text):
+        text = re.sub(r"(\<(.*?)\>)", " ", text)
+        return text
+
     # Combines all the normalization functions into one function
     def _normalize(self,text):
         text = re.sub(r'^\s+|\s+$', '', text)
         text = re.sub(r'[\s\t]+', ' ', text)
+        text = self.remove_tags(text)
         text = re.sub(r'–', '\-', text)
         text = re.sub(r"’", '\'', text)
         text = re.sub(r"(?i)(and/or)", "and", text)
