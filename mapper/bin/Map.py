@@ -1,3 +1,7 @@
+import nltk
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+from nltk.stem import WordNetLemmatizer
 import platform
 import os
 from datetime import datetime
@@ -11,6 +15,7 @@ from spacy.util import compile_infix_regex
 #from collections import OrderedDict
 import threading
 import re
+
 from FalsePositives import FalsePositives
 
 # Base mapper class, common properties in all child classes will be inherited
@@ -196,6 +201,7 @@ class Map(ABC):
         for id in self.gardObj:
             text = self.gardObj[id]['name']
             self.word_to_gard[text.lower()] = id
+
             name_doc = self.nlp.make_doc(text)
             name_patterns.append(name_doc)
 
@@ -264,6 +270,27 @@ class Map(ABC):
         text = re.sub(r"(\<(.*?)\>)", " ", text)
         return text
 
+    def lemmatization(self, text):
+        tokens = text.split()
+        lemma = WordNetLemmatizer()
+        lemma_tokens = []
+
+        for x in tokens:
+            if self.is_acronym(x):
+                lemma_tokens.append(x)
+                continue
+
+            if '.' in x:
+                loc = x.index('.')
+                x = x.replace('.','')
+                x = lemma.lemmatize(x.lower())
+                x = x[:loc] + '.' + x[loc:]
+                lemma_tokens.append(x)
+            else:
+                lemma_tokens.append(lemma.lemmatize(x.lower()))
+
+        return ' '.join(lemma_tokens)
+
     # Combines all the normalization functions into one function
     def _normalize(self,text):
         text = re.sub(r'^\s+|\s+$', '', text)
@@ -275,10 +302,10 @@ class Map(ABC):
         text = re.sub(r"[^-\w./'\(\) ]", "", text)
         text = re.sub(r"(?i)(non )|(non- )", "non", text)
         text = re.sub(r"(?i)'s", "", text)
+        text = self.lemmatization(text)
         text = self.remove_parenthesis(text)
         text = re.sub(r'[\s\t]+', ' ', text)
         text = re.sub(r'^\s+|\s+$', '', text)
-        
         return text
 
     # Original SpaCy tokenizer but with one small edit to leave hyphenated words combined
@@ -316,6 +343,7 @@ class Map(ABC):
     # prints out GARD data (TESTING PURPOSES)
     def _gardData(self):
         print(self.gardObj)
+        print(len(self.gardObj))
 
     # prints out Input data (TESTING PURPOSES)
     def _inputData(self):
