@@ -7,10 +7,16 @@ NormMap V2 is a python based package which maps a specific data source to a rare
 ```
 pandas==1.4.2
 spacy==3.2.1
+nltk==3.6.7
 ```
 NormMap V2 uses the SpaCy's `en_core_web_lg` language model and will also have to be installed
 ```
 python -m spacy download en_core_web_lg
+```
+NormMap V2 also uses NLTK's WordNetLemmatizer for lemmatization. But the data used for this is already automatically downloaded upon running NormMap V2
+```
+nltk.download('wordnet')
+nltk.download('omw-1.4')
 ```
 
 ## Accepted input file types

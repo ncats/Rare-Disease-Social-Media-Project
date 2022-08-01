@@ -15,3 +15,6 @@ mapper/bin/data/input/filtered_abs.csv
 mapper/bin/data/input/filtered_abs.txt
 mapper/bin/run.py
 mapper/bin/data/input/10000_grantAbstracts.xlsx
+mapper/bin/data/input/preprocessed_subreddit_list.json
+mapper/bin/data/input/primary_subreddit_list.csv
+.preprocessed_subreddit_listcpreprocessed_subreddit_listspreprocessed_subreddit_listv

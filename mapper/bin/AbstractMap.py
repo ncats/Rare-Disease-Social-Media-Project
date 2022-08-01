@@ -12,6 +12,12 @@ class AbstractMap(Map.Map):
         file_type = file_split[1]
         file_name = file_split[0]
 
+        if file_type == 'json':
+            temp_xlsx = pd.read_json(self.data)
+            print(temp_xlsx)
+            temp_xlsx.to_csv(file_name.join('.csv'), encoding='latin-1', index=False)
+            self.data = file_name.join('.csv')
+
         if file_type == 'xlsx':
             temp_xlsx = pd.read_excel(self.data)
             temp_xlsx.to_csv(file_name.join('.csv'), encoding='latin-1', index=False) #does not work in utf-8 encoding
@@ -67,8 +73,12 @@ class AbstractMap(Map.Map):
     def append_match_dict(self,doc):
         for match_id, start, end in self.matcher(doc):
             pattern_type = self.nlp.vocab.strings[match_id]
-            self.matches[doc._.id] = list(set(self.matches.get(doc._.id, []) + [(pattern_type, str(doc[start:end]))]))
+            matched_word = list(set(self.matches.get(doc._.id, []) + [(pattern_type, str(doc[start:end]))]))
+            
+            if matched_word in self.false_positives._getall() or matched_word in self.false_positives._getall(acronyms=True):
+                continue
 
+            self.matches[doc._.id] = matched_word
             self.id_list.append(str(doc._.id))
             self.col_match_list.append(str(doc._.col))
             self.name_list.append(str(doc[start:end]))

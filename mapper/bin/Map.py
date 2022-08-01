@@ -86,7 +86,7 @@ class Map(ABC):
 
     # Calculates a systems maximum allowed batch size, currently is set to a static number until it is implemented
     def calc_batch(self):
-        return 1000
+        return 100000
 
     # creates a file path to the data folder with the filename variable
     def _create_path (self,filename,input_file):
@@ -211,7 +211,7 @@ class Map(ABC):
             for syn in self.gardObj[id]['synonyms']:
                 if self.is_acronym(syn):
                     continue
-                elif syn in self.false_positives._getall():
+                elif syn in self.false_positives._getall() or syn in self.false_positives._getall(acronyms=True):
                     continue
                 else:
                     self.word_to_gard[syn.lower()] = id
