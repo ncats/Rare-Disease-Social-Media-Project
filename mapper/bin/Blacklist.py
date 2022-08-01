@@ -1,4 +1,4 @@
-class FalsePositives ():
+class Blacklist ():
     def __init__(self):
         self.false_positives_acronyms = ['ChILD','Tina','Azul']
         self.false_positives = ['baltimore', 'stocks', 'ACDC', 'polydactyl', 'Asian_Fever','JRPG', 'Lemon',

@@ -15,12 +15,11 @@ from spacy.util import compile_infix_regex
 #from collections import OrderedDict
 import threading
 import re
-
-from FalsePositives import FalsePositives
+from Blacklist import Blacklist
 
 # Base mapper class, common properties in all child classes will be inherited
 class Map(ABC):
-    def __init__(self, fp=None):
+    def __init__(self, bl=None):
         self.counter = 0
         self.id_list = list()
         self.col_match_list = list()
@@ -38,23 +37,23 @@ class Map(ABC):
         self.attr = None
         self.matches = dict()
 
-        if fp and isinstance(fp,FalsePositives):
-            self.false_positives = fp
+        if bl and isinstance(bl,Blacklist):
+            self.blacklist = bl
             
         else:
-            self.false_positives = FalsePositives()
-            self.false_positives._clear()
-            self.false_positives._clear(acronyms=True)
+            self.blacklist = Blacklist()
+            self.blacklist._clear()
+            self.blacklist._clear(acronyms=True)
 
             # Adds common false positives to a list to ignore when matching
-            self.false_positives._add('type ii')
-            self.false_positives._add('type II')
-            self.false_positives._add('type 2')
-            self.false_positives._add('former')
-            self.false_positives._add('formerly')
-            self.false_positives._add('subtype')
-            self.false_positives._add('type')
-            self.false_positives._add('ML 2')
+            self.blacklist._add('type ii')
+            self.blacklist._add('type II')
+            self.blacklist._add('type 2')
+            self.blacklist._add('former')
+            self.blacklist._add('formerly')
+            self.blacklist._add('subtype')
+            self.blacklist._add('type')
+            self.blacklist._add('ML 2')
 
         self.t0 = datetime.now()
         self.root = os.getcwd()
@@ -211,7 +210,7 @@ class Map(ABC):
             for syn in self.gardObj[id]['synonyms']:
                 if self.is_acronym(syn):
                     continue
-                elif syn in self.false_positives._getall() or syn in self.false_positives._getall(acronyms=True):
+                elif syn in self.blacklist._getall() or syn in self.blacklist._getall(acronyms=True):
                     continue
                 else:
                     self.word_to_gard[syn.lower()] = id
@@ -248,7 +247,7 @@ class Map(ABC):
             for match in matches:
                 x,y = match.span()
                 selected_phrase = text[x+1:y-1]
-                fp_list = self.false_positives._getall()
+                fp_list = self.blacklist._getall()
                 
                 for fp in fp_list:
                     for word in selected_phrase.split():
@@ -266,10 +265,12 @@ class Map(ABC):
 
         return text
 
+    # Removes leftover HTML tags from text "ex. <h1>"
     def remove_tags(self, text):
         text = re.sub(r"(\<(.*?)\>)", " ", text)
         return text
 
+    # Simplifies words in text to its singular form from plural
     def lemmatization(self, text):
         tokens = text.split()
         lemma = WordNetLemmatizer()

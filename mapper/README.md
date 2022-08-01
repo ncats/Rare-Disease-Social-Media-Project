@@ -70,6 +70,14 @@ map._match('abstracts.csv','disease_list.json', IDcol='col0', TEXTcols=['col1','
 
 DEFAULT COLUMNS ARE `Application_ID` for the unique identifier column and `Abstract` for the text column
 
+### Adding a list of blacklisted words
+To add blacklisted words, create a Blacklist object and use its methods to add the blacklisted words you want.
+Then you will instantiate the Map object with the Blacklist object as a parameter
+```
+blacklist = Blacklist()
+blacklist.add('word_to_be_blacklisted')
+map = AbstractMap(bl=blacklist)
+```
 ## Adding different types of data to be mapped
 Part of NormMap V2's improvements is the ability to easily expand different types of data beyond Abstract and Subreddit data. To do this you will need to make another class and have it inherit the `Map` class and override the `_match()` method and use the inherited methods from the `Map` for normalization and matching
 
