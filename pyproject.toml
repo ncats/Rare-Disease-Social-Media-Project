@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools >= 65.3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rdsmproj"
+version="0.0.1"
+description = "Set of tools for use in research of rare disease related text."
+authors = [
+    {name='Bradley Karas', email='bradley.karas@gmail.com'},
+    {name='Devon Leadman', email='devon.leadman@axleinfo.com'},
+    {name='William Kariampuzha', email='William.Kariampuzha@axleinfo.com'}
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["Rare diseases",
+            "Natural Language Processing",
+            "Data Science",
+            "Infodemiology",
+            "top2vec",
+            "NormMap"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "pandas>=1.4.2"
+]
+
+[project.optional-dependencies]
+mapper = [
+    'nltk>=3.6.7',
+    'spacy>=3.2.1'
+]
+tm_t2v = [
+    'contractions',
+    'gensim',
+    'matplotlib',
+    'nltk',
+    'numpy',
+    'psutil',
+    'seaborn',
+    'top2vec',
+    'tqdm',
+    'wordcloud'
+]
+sm_reddit = [
+    'pmaw',
+    'tqdm',
+    'zstandard'
+]
+tm_lda = [
+    'bertopic',
+            'contractions',
+            'gensim',
+            'hyperopt',
+            'matplotlib',
+            'nltk',
+            'numpy',
+            'optuna',
+            'psutil',
+            'scipy',
+            'seaborn',
+            'sklearn',
+            'tqdm',
+            'wordcloud'
+]
+
+[project.urls]
+homepage = "https://github.com/ncats/Rare-Disease-Social-Media-Project"
+documentation = "https://github.com/ncats/Rare-Disease-Social-Media-Project"
+repository = "https://github.com/ncats/Rare-Disease-Social-Media-Project"
+
+[tool.setuptools.packages.find]
+where = ["rdsmproj"]
+exclude=["data"]
