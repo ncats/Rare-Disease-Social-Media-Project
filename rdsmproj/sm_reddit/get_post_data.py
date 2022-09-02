@@ -27,15 +27,15 @@ class GetPosts:
     path: str, Path (Optional, default None)
         Path to where the subreddit data will be stored.
 
-    after: int (Optional, default None)
-        Date in utc for the date to get all posts after.
-
     silence: bool (Optional, default True)
         Silences the PushshiftAPI logger.
+    
+    pmaw_args: dict (Optional, default None)
+        Pass arguments to pmaw api.search_comments
     """
 
     def __init__(self, name:str, path:Union[str,Path] = None,
-                 after:Optional[int] = None, silence:bool=True):
+                 silence:bool=True, pmaw_args:dict=None):
 
         # Sets name of subreddit.
         self.name = name
@@ -55,11 +55,11 @@ class GetPosts:
         # Sets the posts retrieved to 0 initially.
         self.post_num = 0
 
-        # Checks if date for after is given. Uses default of 2010 if not given.
-        if after:
-            self.after = after
+        # Passes optional arguments if pmaw_args is given.
+        if pmaw_args:
+            self.pmaw_args = pmaw_args
         else:
-            self.after = int(dt.datetime(2010,1,1,0,0).timestamp())
+            self.pmaw_args = None
 
         # Calls the api to search for submissions.
         self._get_post_data()
@@ -73,7 +73,8 @@ class GetPosts:
         try:
             # Tries to query PushShift for submission data of a given subreddit.
             posts = list(api.search_submissions(subreddit=self.name,
-                                                    after=self.after, metadata=True))
+                                                metadata=True,
+                                                **self.pmaw_args))
             # Checks if any posts were retrieved.
             if posts:
                 # Sets the filename.
