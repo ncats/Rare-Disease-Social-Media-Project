@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rdsmproj"
-version = "0.0.16"
+version = "0.0.17"
 description = "Set of tools for use in research of rare disease related text."
 authors = [
     {name='Bradley Karas', email='bradley.karas@gmail.com'},
