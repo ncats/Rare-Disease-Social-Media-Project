@@ -394,8 +394,10 @@ class PreProcess:
         # If text documents are not passed and no datafile is passed, defaults to subreddit.
         else:
             if self.data_folder:
-                comments = utils.get_data_path('comments',self.data_folder)
-                self.data_path = Path(comments, f'{name}_comments.json')
+                comments = utils.get_data_path(self.data_folder)
+            else:
+                comments = utils.get_data_path('comments')
+            self.data_path = Path(comments, f'{name}_comments.json')
 
         # Checks if model_path exists. If it is given, then it checks if the path exists and
         # creates the directory if it does not.
