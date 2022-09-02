@@ -366,7 +366,6 @@ class PreProcess:
     def __init__(self, name:str,
                  datafile_path:Optional[Union[Path,str]]=None,
                  data_folder:Optional[Union[Path,str]]=None,
-                 subreddit:Optional[str]=None,
                  model_path:Optional[Union[Path,str]]=None,
                  documents:list[str]=None,
                  no_above:Optional[float] = 1.0,
@@ -380,6 +379,7 @@ class PreProcess:
         self.keep_n = keep_n
         self.data_folder = data_folder
         self.documents = documents
+        self.tokenized_docs = None
         self.data_path = None
         
         # Checks if datafile_path is given. If it exists, it loads the data,
@@ -413,6 +413,13 @@ class PreProcess:
             utils.check_folder(model_path)
             self.model_path = model_path
 
+        if Path(self.model_path,f'{self.name}_documents.json').is_file():
+            self.documents = utils.load_json(Path(self.model_path,
+                                       f'{self.name}_documents.json'))
+        if Path(self.model_path,f'{self.name}_tokenized_docs.json').is_file():
+            self.tokenized_docs = utils.load_json(Path(self.model_path,
+                                       f'{self.name}_tokenized_docs.json'))
+
     def __call__(self):
         """
         Returns
@@ -427,32 +434,18 @@ class PreProcess:
             documents = [doc for doc in documents]
             self.documents = get_unique(documents)
 
-        # Checks if a document file already exists. If it does, then it loads the documents and
-        # creates tokenized documents, id2word, and corpus from the loaded documents file.
-        elif Path(self.model_path,f'{self.name}_documents.json').is_file():
-            self.documents = utils.load_json(Path(self.model_path,
-                                       f'{self.name}_documents.json'))
-            tokenized_docs = utils.load_json(Path(self.model_path,
-                                       f'{self.name}_tokenized_docs.json'))
-            id2word = get_id2word(tokenized_docs,
-                                  no_above = self.no_above,
-                                  no_below=self.no_below,
-                                  keep_n=self.keep_n)
-            corpus = create_corpus(id2word, tokenized_docs)
-
-            return self.documents, tokenized_docs, id2word, corpus
-
         # Dumps the documents data to a file for retrieval and use later to preserve order of
         # documents, which is essential for reproducibility of results and analysis.
         utils.dump_json(self.documents, self.model_path,f'{self.name}_documents')
 
         # Once document data is retrieved, then the tokenized documents, id2word, and corpus
         # are generated from the data.
-        tokenized_docs = tokenize_docs(self.documents)
-        # Lemmatizes Tokens.
-        tokenized_docs = get_lemma(tokenized_docs)
-        # Creates bigrams and trigrams.
-        tokenized_docs = get_phrases(tokenized_docs)
+        if self.tokenized_docs is None:
+            tokenized_docs = tokenize_docs(self.documents)
+            # Lemmatizes Tokens.
+            tokenized_docs = get_lemma(tokenized_docs)
+            # Creates bigrams and trigrams.
+            self.tokenized_docs = get_phrases(tokenized_docs)
         # Saves the tokenized documents so that tokenization and ngram creation does not need
         # to be redone each time.
         utils.dump_json(tokenized_docs,self.model_path,f'{self.name}_tokenized_docs')

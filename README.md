@@ -13,7 +13,13 @@ The project is split into four packages as part of rdsmproj:
 4. [tm_lda](https://github.com/ncats/Rare-Disease-Social-Media-Project/tree/main/rdsmproj/tm_lda) is a (**legacy**) python package that creates topic models of text primarily using LDA as implemented by [Gensim](https://radimrehurek.com/gensim/). This package was used in this [paper](https://doi.org/10.3389/frai.2022.948313).
 
 ## Installation
-Each package above is installed separately.
+Ensure that you have up to date copies of `pip`, `setuptools`, and `wheel` prior to installation.
+```bash
+pip install --upgrade pip setuptools wheel
+```
+
+
+For now, each package above is installed separately.
 ```bash
 pip install rdsmproj[mapper]
 pip install rdsmproj[sm_reddit]
