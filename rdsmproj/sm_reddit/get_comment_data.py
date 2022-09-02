@@ -27,9 +27,14 @@ class GetRedditComments:
         Path for data to be written to. Default is to a comments folder in data folder.
     silence: bool (Optional, default True)
         Silences the PushshiftAPI logger.
+    pmaw_args: dict (Optional, default None)
+        Pass arguments to pmaw api.search_submission_comment_ids.
     """
-    def __init__(self, data:list[dict] = None, data_path:Union[str, Path] = None,
-                 missing_list:Optional[list[dict]] = None, silence:bool=True):
+    def __init__(self, data:list[dict] = None,
+                 data_path:Union[str, Path] = None,
+                 missing_list:Optional[list[dict]] = None,
+                 silence:bool=True,
+                 pmaw_args:dict=None) -> None:
 
         # Uses given path or default if none provided.
         if data_path:
@@ -57,6 +62,12 @@ class GetRedditComments:
         if missing_list is None:
             # Sets missing comment list to empty list.
             self.missing_list = []
+        
+        # Passes optional arguments if pmaw_args is given.
+        if pmaw_args:
+            self.pmaw_args = pmaw_args
+        else:
+            self.pmaw_args = None
 
         # Gets the comment data. Updates the self.data with comments.
         self._get_comments()
@@ -88,7 +99,8 @@ class GetRedditComments:
             if 'parsed' not in submission:
                 try:
                     # Tries to query PushShift for the comment list of a given post.
-                    comment_id_list = list(api.search_submission_comment_ids(ids=submission['id']))
+                    comment_id_list = list(api.search_submission_comment_ids(ids=submission['id'],
+                                                                             **self.pmaw_args))
                     # If comment list exists, tries to retrieve comments.
                     if comment_id_list:
                         try:
