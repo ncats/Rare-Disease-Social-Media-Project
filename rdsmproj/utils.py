@@ -78,9 +78,13 @@ def get_data_path(path:Union[Path, str]) -> Path:
     Path object.
     """
 
-    data_path = find_data_path()
+    if path:
+        data_path = Path(data_path, path)
+    else:
+        data_path = Path(Path.cwd(), 'data')
+    #data_path = find_data_path()
     # Create data path.
-    data_path = Path(data_path, path)
+    #data_path = Path(data_path, path)
     # Checks if directory exists and creates if it does not.
     check_folder(data_path)
 
@@ -95,9 +99,9 @@ def find_data_path() -> Path:
     Path object.
     """
     # Find path for script.
-    file_path = Path(__file__).parent.parent.resolve()
+    #file_path = Path(__file__).parent.parent.resolve()
     # Create data path.
-    data_path = Path(file_path, 'data')
+    data_path = Path(Path.cwd(), 'data')
     # Checks if directory exists and creates if it does not.
     check_folder(data_path)
 
