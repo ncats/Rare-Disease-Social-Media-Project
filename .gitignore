@@ -17,3 +17,5 @@ rdsmproj/mapper/bin/data/input/primary_subreddit_list.csv
 **/.ipynb_checkpoints
 **/__pycache__
 data/*
+**.egg-info/
+dist/

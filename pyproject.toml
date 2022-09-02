@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools >= 65.3.0"]
+requires = ["setuptools >= 65.3.0", "wheel >= 0.37.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "rdsmproj"
-version="0.0.4"
+dynamic = ["version"]
 description = "Set of tools for use in research of rare disease related text."
 authors = [
     {name='Bradley Karas', email='bradley.karas@gmail.com'},
@@ -79,3 +79,6 @@ repository = "https://github.com/ncats/Rare-Disease-Social-Media-Project"
 [tool.setuptools.packages.find]
 where = ["rdsmproj"]
 exclude=["data"]
+
+[tools.setuptools.dynamic]
+version = {attr = "rdsmproj.VERSION"}
