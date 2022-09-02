@@ -1,3 +1,4 @@
+![](https://img.shields.io/pypi/v/rdsmproj)
 <img src = "https://ncats.nih.gov/sites/all/themes/ncats-2014/images/assets/ncats-logo.png" align=right width="30%" height="30%">
 
 # RDSMproj
@@ -18,8 +19,7 @@ Ensure that you have up to date copies of `pip`, `setuptools`, and `wheel` prior
 pip install --upgrade pip setuptools wheel
 ```
 
-
-For now, each package above is installed separately.
+For now, each package above is installed separately. Installation can be done using [pypi](https://pypi.org/project/rdsmproj/)
 ```bash
 pip install rdsmproj[mapper]
 pip install rdsmproj[sm_reddit]
