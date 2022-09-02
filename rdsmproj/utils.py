@@ -63,7 +63,7 @@ def check_folder(path:Union[str,Path]):
         # If folder does not exist it creates it.
         Path(path).mkdir(parents=True, exist_ok=True)
 
-def get_data_folder(path:Union[Path, str], data_path:Union[Path,str]=None) -> Path:
+def get_data_path(path:Union[Path, str], data_path:Union[Path,str]=None) -> Path:
     """
     Creates a data folder for the results to be written to.
 
