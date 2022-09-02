@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rdsmproj"
-version="0.0.1"
+version="0.0.4"
 description = "Set of tools for use in research of rare disease related text."
 authors = [
     {name='Bradley Karas', email='bradley.karas@gmail.com'},
@@ -29,46 +29,46 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 dependencies = [
-    "pandas>=1.4.2"
+    "pandas >= 1.4.2"
 ]
 
 [project.optional-dependencies]
 mapper = [
-    'nltk>=3.6.7',
-    'spacy>=3.2.1'
+    'nltk >= 3.6.7',
+    'spacy >= 3.2.1'
 ]
 tm_t2v = [
     'contractions',
-    'gensim',
-    'matplotlib',
-    'nltk',
-    'numpy',
-    'psutil',
-    'seaborn',
-    'top2vec',
-    'tqdm',
-    'wordcloud'
+    'gensim >= 4.1.2',
+    'matplotlib >= 3.5.1',
+    'nltk >= 3.6.5',
+    'numpy >= 1.22.3',
+    'psutil >= 5.9.0',
+    'seaborn >= 0.11.2',
+    'top2vec >= 1.0.27',
+    'tqdm >= 4.62.3',
+    'wordcloud >= 1.8.1'
 ]
 sm_reddit = [
-    'pmaw',
-    'tqdm',
-    'zstandard'
+    'pmaw >= 2.1.0',
+    'tqdm >= 4.62.3',
+    'zstandard >= 0.17.0'
 ]
 tm_lda = [
-    'bertopic',
-            'contractions',
-            'gensim',
-            'hyperopt',
-            'matplotlib',
-            'nltk',
-            'numpy',
-            'optuna',
-            'psutil',
-            'scipy',
-            'seaborn',
-            'sklearn',
-            'tqdm',
-            'wordcloud'
+    'bertopic >= 0.9.4',
+    'contractions',
+    'gensim >= 4.1.2',
+    'hyperopt >= 0.2.7',
+    'matplotlib >= 3.5.1',
+    'nltk >= 3.6.5',
+    'numpy >= 1.22.3',
+    'optuna >= 2.10.0',
+    'psutil >= 5.9.0',
+    'scipy >= 1.7.3',
+    'seaborn >= 0.11.2',
+    'sklearn >= 1.0',
+    'tqdm >= 4.62.3',
+    'wordcloud >= 1.8.1'
 ]
 
 [project.urls]
