@@ -364,7 +364,9 @@ class PreProcess:
     corpus
     """
     def __init__(self, name:str,
-                 data_path:Optional[Union[Path,str]]=None,
+                 datafile_path:Optional[Union[Path,str]]=None,
+                 data_folder:Optional[Union[Path,str]]=None,
+                 subreddit:Optional[str]=None,
                  model_path:Optional[Union[Path,str]]=None,
                  documents:list[str]=None,
                  no_above:Optional[float] = 1.0,
@@ -376,11 +378,12 @@ class PreProcess:
         self.no_above = no_above
         self.no_below = no_below
         self.keep_n = keep_n
+        self.data_folder = data_folder
         
-        # Checks if data_path exists. If it exists, it loads the data, strips junk, and finds the
-        # unique items to create the list of documents.
-        if data_path:
-            self.data_path = data_path
+        # Checks if datafile_path is given. If it exists, it loads the data,
+        # strips junk, and finds the unique items to create the list of documents.
+        if datafile_path:
+            self.data_path = datafile_path
             data = utils.load_json(Path(self.data_path))
             documents = [strip_junk(doc) for doc in documents]
             self.documents = get_unique(data)
@@ -388,11 +391,11 @@ class PreProcess:
         elif documents:
             documents = [strip_junk(doc) for doc in documents]
             self.documents = get_unique(data)
-        # If the data_path is not given, then it loads up the subreddit data from the comments
-        # directory.
+        # If text documents are not passed and no datafile is passed, defaults to subreddit.
         else:
-            comments = utils.get_data_path('comments')
-            self.data_path = Path(comments, f'{name}_comments.json')
+            if self.data_folder:
+                comments = utils.get_data_path('comments',self.data_folder)
+                self.data_path = Path(comments, f'{name}_comments.json')
 
         # Checks if model_path exists. If it is given, then it checks if the path exists and
         # creates the directory if it does not.

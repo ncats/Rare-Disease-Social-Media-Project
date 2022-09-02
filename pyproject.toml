@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rdsmproj"
-version = "0.0.19"
+version = "0.0.20"
 description = "Set of tools for use in research of rare disease related text."
 authors = [
     {name='Bradley Karas', email='bradley.karas@gmail.com'},
@@ -12,7 +12,7 @@ authors = [
     {name='William Kariampuzha', email='William.Kariampuzha@axleinfo.com'}
 ]
 license = {file = "LICENSE"}
-readme = "README.md"
+readme = "README.md" 
 requires-python = ">=3.7"
 keywords = ["Rare diseases",
             "Natural Language Processing",
