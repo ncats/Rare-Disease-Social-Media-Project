@@ -81,7 +81,7 @@ def get_data_path(path:Union[Path, str], data_path:Union[Path,str]=None) -> Path
     Path object for folder of results.
     """
     if data_path is None:
-        folder = Path.cwd()
+        folder = Path(Path.cwd(), 'data')
     else:
         folder = data_path
     
