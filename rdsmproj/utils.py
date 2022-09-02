@@ -79,7 +79,7 @@ def get_data_path(path:Union[Path, str]) -> Path:
     """
 
     if path:
-        data_path = Path(data_path, path)
+        data_path = Path(path)
     else:
         data_path = Path(Path.cwd(), 'data')
     #data_path = find_data_path()
