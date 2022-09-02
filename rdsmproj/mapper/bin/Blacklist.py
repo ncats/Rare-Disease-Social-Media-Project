@@ -1,7 +1,7 @@
 class Blacklist ():
     def __init__(self):
-        self.false_positives_acronyms = ['ChILD','Tina','Azul']
-        self.false_positives = ['baltimore', 'stocks', 'ACDC', 'polydactyl', 'Asian_Fever','JRPG', 'Lemon',
+        self.blacklisted_acronyms = ['ChILD','Tina','Azul']
+        self.blacklisted = ['baltimore', 'stocks', 'ACDC', 'polydactyl', 'Asian_Fever','JRPG', 'Lemon',
                        'lebanon', 'Iditarod', 'bigfoot', 'Pantera', 'CharterCities', 'thrashmetal',
                        'Asthma', 'beadsprites', 'Chameleons', 'metaphorically', 'MovieExchange',
                        'Hell_On_Wheels', 'MicroPenis', 'RoomofRequirement', 'Basenji',
@@ -57,31 +57,31 @@ class Blacklist ():
                     
     def _clear(self, acronyms=False):
         if acronyms:
-            self.false_positives_acronyms = list()
+            self.blacklisted_acronyms = list()
              
         else:
-            self.false_positives = list()
+            self.blacklisted = list()
             
     def _getall(self, acronyms=False):
         if acronyms:
-            return self.false_positives_acronyms 
+            return self.blacklisted_acronyms 
         else:
-            return self.false_positives
+            return self.blacklisted
 
     def _remove(self, word, acronyms=False):
         if acronyms:
-            self.false_positives_acronyms.remove(word)
+            self.blacklisted_acronyms.remove(word)
         else:
-            self.false_positives.remove(word)
+            self.blacklisted.remove(word)
 
     def _pop(self, index, acronyms=False):
         if acronyms:
-            self.false_positives_acronyms.pop(index)
+            self.blacklisted_acronyms.pop(index)
         else:
-            self.false_positives.pop(index)
+            self.blacklisted.pop(index)
 
     def _add(self, word, acronyms=False):
         if acronyms:
-            self.false_positives_acronyms.append(word)
+            self.blacklisted_acronyms.append(word)
         else:
-            self.false_positives.append(word)
+            self.blacklisted.append(word)
