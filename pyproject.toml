@@ -77,7 +77,6 @@ documentation = "https://github.com/ncats/Rare-Disease-Social-Media-Project"
 repository = "https://github.com/ncats/Rare-Disease-Social-Media-Project"
 
 [tool.setuptools.packages.find]
-where = ["rdsmproj"]
 exclude=["data"]
 
 [tools.setuptools.dynamic]
