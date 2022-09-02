@@ -379,6 +379,8 @@ class PreProcess:
         self.no_below = no_below
         self.keep_n = keep_n
         self.data_folder = data_folder
+        self.documents = documents
+        self.data_path = None
         
         # Checks if datafile_path is given. If it exists, it loads the data,
         # strips junk, and finds the unique items to create the list of documents.
@@ -417,9 +419,17 @@ class PreProcess:
         -------
             documents, tokenized documents, id2word, and corpus objects.
         """
+        # If data is not already present in self.documents, then it defaults to Reddit data
+        # extraction and filtering loading the .json from data_path.
+        if self.documents is None:
+            data = utils.load_json(Path(self.data_path))
+            documents = get_docs(data)
+            documents = [doc for doc in documents]
+            self.documents = get_unique(documents)
+
         # Checks if a document file already exists. If it does, then it loads the documents and
         # creates tokenized documents, id2word, and corpus from the loaded documents file.
-        if Path(self.model_path,f'{self.name}_documents.json').is_file():
+        elif Path(self.model_path,f'{self.name}_documents.json').is_file():
             self.documents = utils.load_json(Path(self.model_path,
                                        f'{self.name}_documents.json'))
             tokenized_docs = utils.load_json(Path(self.model_path,
@@ -431,13 +441,6 @@ class PreProcess:
             corpus = create_corpus(id2word, tokenized_docs)
 
             return self.documents, tokenized_docs, id2word, corpus
-        # If data is not already present in self.documents, then it defaults to Reddit data
-        # extraction and filtering loading the .json from data_path.
-        elif self.documents is None:
-            data = utils.load_json(Path(self.data_path))
-            documents = get_docs(data)
-            documents = [doc for doc in documents]
-            self.documents = get_unique(documents)
 
         # Dumps the documents data to a file for retrieval and use later to preserve order of
         # documents, which is essential for reproducibility of results and analysis.
