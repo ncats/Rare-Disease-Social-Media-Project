@@ -28,18 +28,77 @@ pip install rdsmproj[tm_tlda]
 ```
 
 ## Quick Start
+### *For more information view the API guide.*
+### Examples using sm_reddit
 
+#### `sm_reddit.GetPosts`
 ```python
 from rdsmproj import sm_reddit
 
-# Add in simple examples for each package.
+pmaw_args = {'limit':1000}
+# Example subreddit 'MachineLearning'.
+# Passes pmaw arguments to search_submissions.
+sm_reddit.GetPosts(name='MachineLearning', silence=False, pmaw_args=pmaw_args)
+```
+
+#### `sm_reddit.GetRedditComments`
+```python
+from rdsmproj import utils
+from pathlib import Path
+
+# Default path to where the post data is located.
+path = utils.get_data_path('posts')
+data = utils.load_json(Path(path,'MachineLearning_posts.json'))
+# Example passes pmaw arguments to search_submission_comment_ids.
+sm_reddit.GetRedditComments(data=data, silence=False, pmaw_args=pmaw_args)
+```
+
+### Example using preprocess to process text data.
+#### `preprocess.Preprocess`
+```python
+from rdsmproj import preprocess as pp
+
+# Example processes the comment data for use with tm_lda or tm_t2v.
+data = pp.PreProcess(name='MachineLearning')
+documents, tokenized_documents, id2word, corpus = data()
+```
+
+### Example using tm_t2v to create and analyze a top2vec model.
+#### `tm_t2v.Top2VecModel`
+```python
+from rdsmproj import tm_t2v
+
+embedding_model = 'doc2vec'
+name = 'MachineLearning'
+clustering_method = 'leaf'
+i = 0
+
+# Creates and saves a model.
+model = tm_t2v.Top2VecModel(name,
+                            f'{name}_{embedding_model}_{clustering_method}_{i}',documents=documents,
+                            embedding_model=embedding_model,
+                            speed='fast-learn'
+                            ).fit()
+```
+
+#### `tm_t2v.AnalyzeTopics`
+```python
+# Analyzes model and records the results.
+tm_t2v.AnalyzeTopics(model=model,
+                     model_name=f'{name}_{embedding_model}_{clustering_method}_{i}',
+                     subreddit_name=name,
+                     tokenized_docs=tokenized_documents,
+                     id2word=id2word,
+                     corpus=corpus,
+                     model_type='Top2Vec')
 ```
 
 ## To Do
 - [x] Test package install from TestPyPI.
-- [ ] Update main README.md Quick Start with examples for each package.
+- [x] Update main README.md Quick Start with examples for most packages.
 - [ ] Create [sm_reddit](https://github.com/ncats/Rare-Disease-Social-Media-Project/tree/main/rdsmproj/sm_reddit) README.md.
 - [ ] Create [tm_t2v](https://github.com/ncats/Rare-Disease-Social-Media-Project/tree/main/rdsmproj/tm_t2v) README.md.
 - [ ] Create [tm_lda](https://github.com/ncats/Rare-Disease-Social-Media-Project/tree/main/rdsmproj/tm_lda) README.md.
+- [ ] Create API guide and documentation pages.
 - [ ] Add visualizations and flowcharts to the readme files.
 - [ ] Upload to PyPI.
