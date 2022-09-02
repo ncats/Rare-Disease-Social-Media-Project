@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rdsmproj"
-version = "0.0.11"
+version = "0.0.12"
 description = "Set of tools for use in research of rare disease related text."
 authors = [
     {name='Bradley Karas', email='bradley.karas@gmail.com'},
@@ -67,7 +67,7 @@ tm_lda = [
     'psutil >= 5.9.0',
     'scipy >= 1.7.3',
     'seaborn >= 0.11.2',
-    'sklearn >= 1.0',
+    'scikit-learn >= 1.0',
     'tqdm >= 4.62.3',
     'wordcloud >= 1.8.1'
 ]
