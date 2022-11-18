@@ -1,5 +1,5 @@
 ![](https://img.shields.io/pypi/v/rdsmproj)
-<img src="https://ncats.nih.gov/sites/all/themes/ncats-2014/images/assets/ncats-logo.png" align=center width="30%" height="30%">
+<img src="ncats.png" alt="NCATS Logo" class="left" width="30%" height="30%">
 
 # RDSMproj
 
