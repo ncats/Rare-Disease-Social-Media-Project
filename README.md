@@ -1,5 +1,6 @@
 ![](https://img.shields.io/pypi/v/rdsmproj)
-<img src="ncats.png" alt="NCATS Logo" class="left" width="30%" height="30%">
+
+<img src="https://raw.githubusercontent.com/ncats/epi4GARD/master/ncats.png" alt="NCATS Logo" class="left" width="40%" height="40%">
 
 # RDSMproj
 
@@ -101,4 +102,4 @@ tm_t2v.AnalyzeTopics(model=model,
 - [ ] Create [tm_lda](https://github.com/ncats/Rare-Disease-Social-Media-Project/tree/main/rdsmproj/tm_lda) README.md.
 - [ ] Create API guide and documentation pages.
 - [ ] Add visualizations and flowcharts to the readme files.
-- [ ] Upload to PyPI.
+- [x] Upload to PyPI.
