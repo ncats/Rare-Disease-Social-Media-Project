@@ -9,7 +9,7 @@ documentation from that package is used to describe the different parameters tha
 gensim.
 """
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, Dict
 import time
 import logging
 

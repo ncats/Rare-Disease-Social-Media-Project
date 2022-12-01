@@ -6,7 +6,7 @@ Script for generating Top2Vec models.
 """
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Dict
 from gensim.models.phrases import ENGLISH_CONNECTOR_WORDS
 from rdsmproj import utils
 from rdsmproj import preprocess as pp

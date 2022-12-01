@@ -6,7 +6,7 @@ Utility functions.
 
 import json
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 
 
 def load_json(path:Union[str,Path]) -> dict:
@@ -26,7 +26,7 @@ def load_json(path:Union[str,Path]) -> dict:
         file = json.load(f)
     return file
 
-def dump_json(json_dict:dict, path:Union[str,Path], filename:str):
+def dump_json(json_dict:Dict, path:Union[str,Path], filename:str):
     """
     Dumps data to a json file given a filename.
 
@@ -70,8 +70,8 @@ def get_data_path(path:Union[Path, str], data_path:Union[Path,str]=None) -> Path
     Parameters
     ----------
     path: str, Path
-        Directory for data to be written to (eg. data\path).
-    
+        Directory for data to be written to (eg. data/path).
+
     data_path: str, Path (Optional, default None)
         Directory where the data folder will be written to.
         Default is Path(Path.cwd(), 'data')
@@ -84,7 +84,7 @@ def get_data_path(path:Union[Path, str], data_path:Union[Path,str]=None) -> Path
         folder = Path(Path.cwd(), 'data')
     else:
         folder = data_path
-    
+    # Checks if folder exists.
     folder_path = Path(folder, path)
     check_folder(folder_path)
     return folder_path

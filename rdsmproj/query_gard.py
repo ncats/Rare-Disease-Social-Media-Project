@@ -6,7 +6,7 @@ Currently cannot query the GARD database.
 """
 
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 from neo4j import GraphDatabase
 from rdsmproj import utils
 

@@ -5,7 +5,7 @@ Get posts from subreddits.
 """
 import logging
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, Dict
 import datetime as dt
 import time
 from pmaw import PushshiftAPI
@@ -35,7 +35,7 @@ class GetPosts:
     """
 
     def __init__(self, name:str, path:Union[str,Path] = None,
-                 silence:bool=True, pmaw_args:dict=None):
+                 silence:bool=True, pmaw_args:Dict=None):
 
         # Sets name of subreddit.
         self.name = name
