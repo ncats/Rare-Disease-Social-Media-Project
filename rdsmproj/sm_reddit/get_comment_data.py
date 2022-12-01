@@ -5,7 +5,7 @@ Get comment data from subreddit posts.
 """
 import logging
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, Dict
 from pmaw import PushshiftAPI
 from tqdm import tqdm
 from rdsmproj import utils
@@ -20,7 +20,7 @@ class GetRedditComments:
 
     Parameters
     ----------
-    data: list[dict]
+    data: list[Dict]
         JSON data from get_posts.py that is a list of dictionaries, with one dictionary
         for each post.
     data_path: str, Path (Optional, default None)
@@ -30,11 +30,11 @@ class GetRedditComments:
     pmaw_args: dict (Optional, default None)
         Pass arguments to pmaw api.search_submission_comment_ids.
     """
-    def __init__(self, data:list[dict] = None,
+    def __init__(self, data:list[Dict] = None,
                  data_path:Union[str, Path] = None,
-                 missing_list:Optional[list[dict]] = None,
+                 missing_list:Optional[list[Dict]] = None,
                  silence:bool=True,
-                 pmaw_args:dict=None) -> None:
+                 pmaw_args:Dict=None) -> None:
 
         # Uses given path or default if none provided.
         if data_path:

@@ -7,7 +7,7 @@ and then saves the file.
 
 import json
 import re
-from typing import Union
+from typing import Union, Dict
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -15,7 +15,7 @@ from rdsmproj.sm_reddit.zreader import Zreader as zreader
 from rdsmproj import utils
 
 
-def create_dataframe(subreddit_dict:dict) -> pd.DataFrame:
+def create_dataframe(subreddit_dict:Dict) -> pd.DataFrame:
     """
     Takes the subreddit dictionary and converts it into a pandas DataFrame.
 

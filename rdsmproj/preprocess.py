@@ -341,7 +341,7 @@ class PreProcess:
 
     model_path: Path, str (Optional, default None)
         Path to model data where files will be written to or loaded from.
-    
+
     documents: list[str] (Optional, default None)
         Can pass a list of document strings directly instead of reading from file.
 
@@ -381,7 +381,7 @@ class PreProcess:
         self.documents = documents
         self.tokenized_docs = None
         self.data_path = None
-        
+
         # Checks if datafile_path is given. If it exists, it loads the data,
         # strips junk, and finds the unique items to create the list of documents.
         if datafile_path:

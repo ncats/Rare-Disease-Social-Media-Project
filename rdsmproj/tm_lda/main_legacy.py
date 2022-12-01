@@ -42,16 +42,16 @@ def lda_hyperopt(tokenized_documents,
                  n_trials,
                  coherence,
                  algo):
-    """
-    Function for optimizing LDA models using hyperopt.
-    """
-
+    
+    #Function for optimizing LDA models using hyperopt.
+    
+    '''
     # These variables were in other tests not part of the published paper.
     chunksize = [2**exponent for exponent in range(1, 15, 1)]
     decay = [0.5, 0.6, 0.7, 0.8, 0.9]
     offset = [2**exponent for exponent in range(11)]
     iterations = [2**exponent for exponent in range(5, 13, 1)]
-    '''
+    
     space = {'num_topics': hp.quniform('num_topics', 3, 100, 1),
              'passes': hp.quniform('passes', 1, 100, 1),
              'chunksize':hp.choice('chunksize', chunksize),
