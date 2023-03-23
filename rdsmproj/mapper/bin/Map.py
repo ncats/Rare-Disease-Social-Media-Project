@@ -36,6 +36,8 @@ class Map(ABC):
         self.matcher = None
         self.attr = None
         self.matches = dict()
+        self.inpath = None
+        self.outpath = None
 
         if bl and isinstance(bl,Blacklist):
             self.blacklist = bl
@@ -89,51 +91,19 @@ class Map(ABC):
 
     # creates a file path to the data folder with the filename variable
     def _create_path (self,filename,input_file):
-        if input_file:
-            if self.isWindows == True:
-                path = (self.root
-                + self.path_char 
-                + 'mapper'
-                + self.path_char 
-                + 'bin' 
-                + self.path_char
-                + 'data' 
-                + self.path_char
-                + 'input'
-                + self.path_char 
-                + filename)
-            else:
-                path = (self.root
-                + self.path_char 
-                + 'data' 
-                + self.path_char 
-                + 'input'
-                + self.path_char 
-                + filename)
-        else:
-            if self.isWindows == True:
-                path = (self.root
-                + self.path_char 
-                + 'mapper'
-                + self.path_char 
-                + 'bin' 
-                + self.path_char 
-                + 'data' 
-                + self.path_char 
-                + 'output'
-                + self.path_char 
-                + filename)
-            else:
-                path = (self.root
-                + self.path_char 
-                + 'data' 
-                + self.path_char 
-                + 'output'
-                + self.path_char 
-                + filename)
-
+        path = os.path.expanduser('~')
+        path = path + '/' + filename
         return path
 
+    def _set_input_path (self, path):
+        self.inpath = self._create_path(path)
+    def _set_output_path (self, path):
+        self.outpath = self._create_path(path)
+    def _get_input_path (self):
+        return self.inpath
+    def _get_output_path (self):
+        return self.outpath
+    
     # batches data and multi-threads a function, for parallel processing
     def batch_thread(self, obj, funct, size):
         threads = list()
@@ -332,13 +302,13 @@ class Map(ABC):
                                     token_match=nlp.tokenizer.token_match,
                                     rules=nlp.Defaults.tokenizer_exceptions)
     # Sets GARD file path    
-    def _loadGard(self,datafile_name):
-        self.gard = self._create_path(datafile_name, input_file=True)
+    def _loadGard(self,path_name):
+        self.gard = path_name
         print('GARD Data file path set to {}'.format(self.gard))
 
     # Sets Input file path
-    def _loadData(self,datafile_name):
-        self.data = self._create_path(datafile_name, input_file=True)
+    def _loadData(self,path_name):
+        self.data = path_name
         print('Input Data file path set to {}'.format(self.data))
 
     # prints out GARD data (TESTING PURPOSES)

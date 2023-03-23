@@ -75,7 +75,7 @@ class AbstractMap(Map.Map):
             pattern_type = self.nlp.vocab.strings[match_id]
             matched_word = list(set(self.matches.get(doc._.id, []) + [(pattern_type, str(doc[start:end]))]))
             
-            if matched_word in self.false_positives._getall() or matched_word in self.false_positives._getall(acronyms=True):
+            if matched_word in self.blacklist._getall() or matched_word in self.blacklist._getall(acronyms=True):
                 continue
 
             self.matches[doc._.id] = matched_word
@@ -168,10 +168,10 @@ class AbstractMap(Map.Map):
         print(t4)    
 
         # Saves CSV file
-        t4.to_csv(self._create_path('abstract_matches.csv', input_file=False), index=False)
+        t4.to_csv(self.outpath + '/normmap_results.csv', index=False)
         
         # Below lines are just for testing purposes
-        df = pd.read_csv(self._create_path('abstract_matches.csv', input_file=False),index_col=False)
+        df = pd.read_csv(self.outpath + '/normmap_results.csv', index_col=False)
         print(df)
 
     # Starts phrase matching between the input and gard file, uses batching and threading to speed up the process
@@ -212,11 +212,11 @@ class AbstractMap(Map.Map):
             print('Matching Doc Objects')
             self.batch_thread(self.dataObj, self._process_doc, self.batchsize)
             
-            with open(self._create_path('new_normalized_abstract_matches.json', input_file=False), mode= 'w+', encoding='utf-8') as file:
+            with open(self.outfile + '/new_normalized_abstract_matches.json', mode= 'w+', encoding='utf-8') as file:
                 print(len(self.matches))
                 json.dump(self.matches, file)
 
-            with open(self._create_path('abstract_matches.csv', input_file=False), 'w', newline='') as mfile:
+            with open(self.outfile + '/normmap_results.csv', 'w', newline='') as mfile:
                 match_writer = csv.writer(mfile)
                 match_writer.writerow(['ID','COLUMN','Matched_Word','CONTEXT','GARD_id'])
                 c = 0
@@ -231,7 +231,7 @@ class AbstractMap(Map.Map):
                         c += 1
                         continue
 
-            df = pd.read_csv(self._create_path('abstract_matches.csv', input_file=False),index_col=False, encoding='latin-1', error_bad_lines=False)
+            df = pd.read_csv(self.outfile + '/normmap_results.csv', index_col=False, encoding='latin-1', error_bad_lines=False)
             df.groupby(['ID', 'Matched_Word']).agg('count')
             self._clean_csv(df)
 	
