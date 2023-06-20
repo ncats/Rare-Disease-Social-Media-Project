@@ -19,8 +19,8 @@ if "-" in rdsmproj_version:
 assert "-" not in rdsmproj_version
 assert "." in rdsmproj_version
 
-assert os.path.isfile("cf_remote/version.py")
-with open("cf_remote/VERSION", "w", encoding="utf-8") as fh:
+assert os.path.isfile("rdsmproj/version.py")
+with open("rdsmproj/VERSION", "w", encoding="utf-8") as fh:
     fh.write("%s\n" % rdsmproj_version)
 
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -29,11 +29,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setuptools.setup(
     name="rdsmproj",
     version=rdsmproj_version,
-    authors = [
-    {name='Bradley Karas', email='bradley.karas@gmail.com'},
-    {name='Devon Leadman', email='devon.leadman@axleinfo.com'},
-    {name='William Kariampuzha', email='William.Kariampuzha@axleinfo.com'}
-]
+    author = "Bradley Karas",
     author_email="Qian.Zhu@nih.gov",
     description="Set of tools for use in research of rare disease related text.",
     long_description=long_description,

@@ -19,3 +19,5 @@ rdsmproj/mapper/bin/data/input/primary_subreddit_list.csv
 data/*
 **.egg-info/
 dist/
+.DS_Store
+**/.DS_Store
