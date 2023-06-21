@@ -14,3 +14,4 @@ posts/* filter=lfs diff=lfs merge=lfs -text
 "comments/**" filter=lfs diff=lfs merge=lfs -text
 comments/** filter=lfs diff=lfs merge=lfs -text
 comments/* filter=lfs diff=lfs merge=lfs -text
+*_comments* filter=lfs diff=lfs merge=lfs -text
