@@ -1,3 +1,15 @@
 *doc2vec* filter=lfs diff=lfs merge=lfs -text
 *ehlersdanlos_* filter=lfs diff=lfs merge=lfs -text
 *Narcolepsy_* filter=lfs diff=lfs merge=lfs -text
+"models/**" filter=lfs diff=lfs merge=lfs -text
+models/** filter=lfs diff=lfs merge=lfs -text
+models/* filter=lfs diff=lfs merge=lfs -text
+"results/**" filter=lfs diff=lfs merge=lfs -text
+results/** filter=lfs diff=lfs merge=lfs -text
+results/* filter=lfs diff=lfs merge=lfs -text
+"posts/**" filter=lfs diff=lfs merge=lfs -text
+posts/** filter=lfs diff=lfs merge=lfs -text
+posts/* filter=lfs diff=lfs merge=lfs -text
+"comments/**" filter=lfs diff=lfs merge=lfs -text
+comments/** filter=lfs diff=lfs merge=lfs -text
+comments/* filter=lfs diff=lfs merge=lfs -text
